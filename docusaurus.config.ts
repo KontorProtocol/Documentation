@@ -83,13 +83,13 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
+        { to: '/vision', label: 'Vision', position: 'left' },
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'docSidebar',
           position: 'left',
-          label: 'Tutorial',
+          label: 'Docs',
         },
-        { to: '/vision', label: 'Vision', position: 'left' },
         // {
         //   href: 'https://github.com/facebook/docusaurus',
         //   label: 'GitHub',
@@ -104,9 +104,17 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Tutorial',
-              to: '/docs/intro',
+              label: 'Getting Started',
+              to: '/docs/getting-started',
             },
+            {
+              label: 'Examples',
+              to: '/docs/category/examples',
+            },
+            {
+              label: 'Reference',
+              to: '/docs/category/reference',
+            }
           ],
         },
         {

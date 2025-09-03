@@ -4,40 +4,63 @@ sidebar_position: 1
 
 # Getting Started
 
-Get started by **creating a new site**.
+This guide walks you through setting up the environment to develop and test smart contracts in Sigil on a Unix-like system.
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+### Install Dependencies
 
-### What you'll need
-
-- [Node.js](https://nodejs.org/en/download/) version 18.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
-
-## Generate a new site
-
-Generate a new Docusaurus site using the **classic template**.
-
-The classic template will automatically be added to your project after you run the command:
-
+#### MacOS
+Install `binaryen` and `brotli` using Homebrew:
 ```bash
-npm init docusaurus@latest my-website classic
+brew install binaryen brotli
 ```
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
-
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
-
+#### Debian
+Install `binaryen` and `brotli`:
 ```bash
-cd my-website
-npm run start
+sudo apt install binaryen brotli
 ```
 
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
+### Set Up Rust
+Sigil is built with Rust, so you need the latest stable Rust version installed.
 
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
+1. Install Rust by following the instructions at [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) or update to the latest stable version.
+2. Add the WebAssembly target for compiling Sigil contracts:
+   ```bash
+   rustup target add wasm32-unknown-unknown
+   ```
 
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+## Working with the Sigil Package
+You will receive a zip package containing two Rust workspaces. Follow these steps to get started:
+
+1. **Unzip the Package**: Extract the zip file provided to you via messaging (e.g., Telegram). The extracted directory has the following structure:
+   ```
+   sigil-package/
+   ├── Kontor/
+   │   ├── src/
+   │   ├── Cargo.toml
+   │   └── ...
+   └── hello-world/
+       ├── src/
+       ├── Cargo.toml
+       └── ...
+   ```
+   - `Kontor`: Contains the core implementation and dependencies for Sigil. You don't need to modify this directly.
+   - `hello-world`: A simple example contract template to get you started.
+
+2. **Navigate to the Example Contract**:
+   ```bash
+   cd hello-world
+   ```
+
+3. **Run the Tests**:
+   Inside the `hello-world` directory, run the following to execute the tests for the example contract:
+   ```bash
+   cargo test
+   ```
+
+## Next Steps
+The `hello-world` folder provides a basic Sigil smart contract template. You can:
+- Work directly in the `hello-world` directory to experiment with the example contract.
+- Copy and paste the `hello-world` folder to create new contracts, using it as a starting point.
+
+For more examples, check out the [Examples](./category/examples) section to learn about cross-contract calling and contract proxying.

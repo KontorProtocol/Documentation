@@ -123,16 +123,10 @@ The early preview of Sigil includes:
 
 ## Known Limitations and Future Plans
 
-**Current Limitations**:
-
-- **No List Support**: The storage system lacks built-in list types.
-- **Querying and Iteration**: Lacking support for advanced querying, iteration, or prefix matching on `Map` types.
-
 **Planned Improvements**:
 
 - Add support for list types in storage.
-- Enhance querying capabilities, including iteration and prefix matching for `Map` types.
-- Dynamic cross-contract calling via ERC-20 like interfaces
+- Enhance querying capabilities, including key prefix matching for `Map` types.
 - Gas tracking
 - Typescript SDK for interacting with contracts clientside
 - Full platform integration testing of contracts

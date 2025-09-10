@@ -128,4 +128,6 @@ The early preview of Sigil includes:
 - Typescript SDK for interacting with contracts clientside
 - Full platform integration testing of contracts
 
-Continue to the [Getting Started](/docs/getting-started) guide go hands-on with Sigil.
+## Get Started
+
+Follow the [Getting Started](/docs/getting-started) guide to set up your environment and explore `sigil-example-contracts`. Future test tooling will include live Kontor instances and client-side SDK integration with Bitcoin testnet for full blockchain validation.

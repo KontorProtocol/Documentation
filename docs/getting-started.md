@@ -60,7 +60,7 @@ You will receive a zip package containing two Rust workspaces. Follow these step
 
 ## Next Steps
 The `hello-world` example contracts provides a basic Sigil smart contract template. You can:
-- Work directly in the `hello-world` directory to experiment with the example contract.
+- Work directly in the `hello-world` directory to experiment with the example contract. Avoid opening the entire `sigil-example-contracts` folder in your editor as the multiple contract workspaces contained within will confuse the rust language server.
 - Copy and paste the `hello-world` folder to create new contracts, using it as a starting point.
 
 Before diving in though, check out the [Examples](./examples) section to learn more about writing Sigil and what it has to offer.

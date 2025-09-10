@@ -109,7 +109,7 @@ const config: Config = {
             },
             {
               label: 'Examples',
-              to: '/docs/category/examples',
+              to: '/docs/examples',
             },
             {
               label: 'Reference',

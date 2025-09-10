@@ -63,4 +63,4 @@ The `hello-world` example contracts provides a basic Sigil smart contract templa
 - Work directly in the `hello-world` directory to experiment with the example contract.
 - Copy and paste the `hello-world` folder to create new contracts, using it as a starting point.
 
-Before diving in though, check out the [Examples](./category/examples) section to learn more about writing Sigil and what it has to offer.
+Before diving in though, check out the [Examples](./examples) section to learn more about writing Sigil and what it has to offer.

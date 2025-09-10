@@ -4,10 +4,9 @@ sidebar_position: 3
 
 # Shared Account
 
-This example demonstrates a multi-tenant shared account that imports the token contract, introducing static contract imports, complex storage structs, authorization logic, ID generation, and cross-contract calls.
+This example demonstrates a simple multi-tenant shared account introducing static contract imports, complex storage structs, authorization logic, ID generation, and cross-contract calls.
 
 ## WIT Interface
-The WIT file (`contract/wit/contract.wit`) defines:
 - `open`: Creates an account with a deposit and tenants, returning an ID or error.
 - `deposit`/`withdraw`: Modifies the account balance.
 - `balance`: Queries the account balance.
@@ -37,12 +36,12 @@ world contract {
 ```
 
 ## Rust Implementation
-- The `import!` macro generates a convenient interface for cross-contract calls to the `token` contract, as seen in the test environment previously.
+- The `import!` macro generates an interface for cross-contract calls to the `token` contract, as seen in the test environment previously.
 - The `StorageRoot` macro, used for the root storage type, and the `Storage` macro, used for nested storage types in the `Account` struct, enable persistent storage.
-- `other_tenants` uses `Map<String, bool>` because the storage layer does not currently support list types, and `Map` provides a limited interface with the `keys` method for iteration.
-- `authorized` validates procedure permissions.
+- `other_tenants` uses `Map<String, bool>` because the storage layer does not currently support list types, and `Map` provides a limited interface with the `keys` method for iteration. Even with a `List` type using a `Map` here could make sense. Instead of `bool` an `enum` or `struct` that defines the their "role" in the account could be written.
+- `authorized` Verifies procedure permissions.
 - `open`: Verifies token balance, generates an ID using `crypto::generate_id()`, sets the account, and transfers tokens to `ctx.contract_signer()`.
-- `deposit`/`withdraw`: Authorize the caller, verify balances, update storage, and call the token contract.
+- `deposit`/`withdraw`: Authorize the caller, verify balances, update storage, and call the token contract following CEI pattern.
 - `balance`/`tenants`: Query the storage for account details.
 
 ```rust
@@ -171,8 +170,8 @@ impl Guest for SharedAccount {
 ```
 
 ## Testing
-- The `import!` macro generates interfaces for both the `shared-account` and `token` contracts. Although the test primarily interacts with the `token` contract through `shared-account` calls, it must first mint tokens for the test environment.
-- `dep_contract_bytes` loads the WebAssembly bytes for the `token` contract.
+- The `import!` macro generates interfaces for both the `shared-account` and `token` contracts. Although the test primarily interacts with the `token` contract through `shared-account` calls, it must first `mint` tokens.
+- `dep_contract_bytes` loads the WebAssembly bytes for the "imported" `token` contract.
 
 ```rust
 #[cfg(test)]
@@ -184,7 +183,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "contract/wit",
-        test = true,
     );
 
     import!(
@@ -192,7 +190,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "../token/contract/wit",
-        test = true,
     );
 
     #[tokio::test]
@@ -253,7 +250,7 @@ mod tests {
 ```
 
 ## Dependencies
-The `test/Cargo.toml` depends on `token-test`. This allows `cargo test` or `cargo build` commands in `shared-account` to trigger builds in `token`.
+Adding the `token-test` dependency to the `token/test/Cargo.toml` file causes `cargo test` or `cargo build` commands in `shared-account` to trigger builds in `token` so the compiled wasm file is available for use in this context.
 
 ```toml
 [package]

@@ -4,15 +4,15 @@ sidebar_position: 2
 
 # Token
 
-This example demonstrates persistent storage, user balances, transactions, and error handling for a fungible token on the blockchain.
+This example demonstrates persistent storage, user balances, transactions, and error handling for a fungible token.
 
 ## WIT Interface
-The WIT file (`contract/wit/contract.wit`) includes imports for:
-- `signer`: Transaction sender.
+Imports types:
+- `signer`: Transaction sender (identity).
 - `error`: Failure handling.
 - `integer`: Amounts.
 
-and exports:
+and exports functions:
 - `init`: Initializes the contract.
 - `mint`: Adds tokens to the signer’s balance.
 - `transfer`: Moves tokens, potentially returning an error.
@@ -36,12 +36,9 @@ world contract {
 ```
 
 ## Rust Implementation
-In `contract/src/lib.rs`:
-- `TokenStorage` represents the contract’s persistent storage. The `StorageRoot` derive macro enables storage capabilities for the type and marks it as the "root" storage type, generating a `storage` function that provides ORM-like persistent storage access to contract functions. Every contract with storage must have exactly one type that derives `StorageRoot`.
-- `Map` is a storage-enabled map type that can hold values of any type that also derives `Storage`. In this case, `Integer` is provided by `stdlib` and is storage-enabled.
-- The `ctx` parameter is passed to every operation that performs a database call. These functions take an `impl ReadContext` or an `impl WriteContext`, depending on their behavior. `ProcContext` implements both, while `ViewContext` implements only `ReadContext`. This ensures state mutations occur only as the result of a transaction while allowing the same functions and methods to be used across procedures and views.
-
-The implementation uses the following:
+- `TokenStorage` represents the contract’s persistent storage. The `StorageRoot` derive macro enables storage capabilities for the type and marks it as the "root" storage type. The root storage is accesible via a generated function: `storage`, which provides an ORM-like interface to contract functions. Every contract with storage must have exactly one type that derives `StorageRoot`.
+- `Map` is a storage-enabled mapping type that can hold values of any type that also derive `Storage`. In this case, `Integer` is provided by `stdlib` and is storage-enabled.
+- The `ctx` parameter must be passed to every operation that performs a database call. These functions take an `impl ReadContext` or an `impl WriteContext`, depending on their behavior. `ProcContext` implements both, while `ViewContext` implements only `ReadContext`. This ensures state mutations occur only as the result of a transaction while allowing the same functions and methods to be used across procedures and views.
 
 ```rust
 use stdlib::*;
@@ -89,9 +86,9 @@ impl Guest for Token {
 ```
 
 ## Testing
-The test in `test/src/lib.rs`, similar to the `hello-world` test, uses the `import!` macro to generate a convenient interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be checked with an additional `?` operator or left unwrapped to assert on the outcome.
+Similar to the test in `hello-world`, this one uses the `import!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
 
-When working with numbers in Sigil, either the `Integer` or `Decimal` types should be used. `From` instnaces have been implemented for many of the primitive types which is why there are many `<num>.into()`s in the test. One can also write: `Integer::from(100)`, or `Decimal::from("1.5")`, or even `let x: Decimal = 1.5.into()`, etc.
+When working with numbers in Sigil, either the `Integer` or `Decimal` types should be used. `From` instances have been implemented for many of the primitive types which is why there are many `<num>.into()`s in the test. One can also write: `Integer::from(100)`, or `Decimal::from("1.5")`, or even `let x: Decimal = 1.5.into()`, etc.
 
 ```rust
 #[cfg(test)]
@@ -103,7 +100,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "contract/wit",
-        test = true,
     );
 
     #[tokio::test]

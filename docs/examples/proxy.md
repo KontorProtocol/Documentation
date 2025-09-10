@@ -2,9 +2,9 @@
 sidebar_position: 5
 ---
 
-# Proxy Contract
+# Proxy
 
-This example demonstrates proxying for contract upgrades in `sigil-example-contracts/proxy`, utilizing the `fallback` hook and introducing `foreign::call` and aliased imports.
+This example demonstrates proxying (a common pattern used in contract upgrades), utilizing the `fallback` hook and introducing the `foreign::call` built-in and aliased imports.
 
 ## WIT Interface
 - `fallback`: Handles WAVE-format expressions, forwarding them to the target contract.
@@ -30,8 +30,9 @@ world contract {
 ```
 
 ## Rust Implementation
-In `contract/src/lib.rs`, the `ProxyStorage` struct stores the `ContractAddress` using the `StorageRoot` macro:
-- `fallback`: Forwards WAVE-format expressions to the stored contract address via `foreign::call`, using `ctx.view_context()` for read-only access.
+- `ProxyStorage` struct stores the `ContractAddress` using the `StorageRoot` macro:
+- `fallback`: Forwards WAVE-format expressions to the stored contract address via the `foreign::call` built-in, using `ctx.view_context()` for read-only access. The `foreign::call` built-in is what is used by the `import!` and `interface!` macros under the hood and it is *not* recommended to use it directly in most situations.
+- `fallback` accepts a `FallContext` which is distinct from `ProcContext` and `ViewContext` in that it can be turned into either one (the `proc_context` method returns `Option<ProcContext>` because the call may not have been made through a Bitcoin transaction)
 - `get-contract-address`: Retrieves the stored contract address.
 - `set-contract-address`: Updates the stored contract address.
 
@@ -79,7 +80,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "contract/wit",
-        test = true,
     );
 
     import!(
@@ -88,7 +88,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "../shared-account-dynamic/contract/wit",
-        test = true,
     );
 
     import!(
@@ -96,7 +95,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "../token/contract/wit",
-        test = true,
     );
 
     #[tokio::test]

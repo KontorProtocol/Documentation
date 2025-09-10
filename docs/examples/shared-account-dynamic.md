@@ -4,11 +4,13 @@ sidebar_position: 4
 
 # Shared Account Dynamic
 
-This example uses the `interface!` macro and `ContractAddress` to implement dynamic cross-contract calls.
+This example uses the `interface!` macro and `ContractAddress` type to implement dynamic cross-contract calls.
 
 ## WIT Interface
-The WIT file (`contract/wit/contract.wit`) includes `contract-address` and defines:
-- `open`: Creates an account with a token, deposit, and tenants, returning an ID or error.
+Import type `contract-address`
+
+and exports:
+- `open`: Creates an account for a specificied token and tenants.
 - `deposit`/`withdraw`: Modifies the account balance using the specified token contract.
 - `balance`/`tenants`: Queries the account balance or tenant list.
 
@@ -37,12 +39,7 @@ world contract {
 ```
 
 ## Rust Implementation
-Compared to the `shared-account` contract, this implementation uses the `interface!` macro to generate a dynamic token interface instead of a static one pinned to a specific contract. Functions (`open`, `deposit`, `withdraw`) take a `token: ContractAddress` argument to specify the token contract. The `Account` struct includes a `token` property to ensure the correct contract is used during authorization. Other functionality remains similar:
-- The `StorageRoot` macro enables persistent storage for the `SharedAccountStorage` struct, and the `Storage` macro is used for the nested `Account` struct.
-- `authorized` validates procedure permissions, checking both user authorization and the token contract address.
-- `open`: Verifies the token balance, generates an ID with `crypto::generate_id()`, sets the account, and transfers tokens to `ctx.contract_signer()`.
-- `deposit`/`withdraw`: Authorize the caller, verify balances, update storage, and call the token contract.
-- `balance`/`tenants`: Query storage.
+Compared to the `shared-account` contract, this implementation uses the `interface!` macro to generate a dynamic token interface instead of a static one pinned to a specific contract. Functions (`open`, `deposit`, `withdraw`) take a `token: ContractAddress` argument to specify the token contract. The `Account` struct includes a `token` property to ensure the correct contract is used during authorization. Other functionality remains the same:
 
 ```rust
 use stdlib::*;
@@ -183,7 +180,7 @@ impl Guest for SharedAccountDynamic {
 ```
 
 ## Testing
-This test mirrors the `shared-account` test but requires a `token` contract address for dynamic calls. It validates account creation, deposits, withdrawals, balance queries, tenant listing, and error handling for unauthorized actions and insufficient balances.
+This test mirrors the `shared-account` test but requires a `token` contract address for dynamic calls.
 
 ```rust
 #[cfg(test)]
@@ -195,7 +192,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "contract/wit",
-        test = true,
     );
 
     import!(
@@ -203,7 +199,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "../token/contract/wit",
-        test = true,
     );
 
     #[tokio::test]

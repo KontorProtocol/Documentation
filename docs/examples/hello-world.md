@@ -4,14 +4,13 @@ sidebar_position: 1
 
 # Hello World
 
-This example illustrates the fundamental structure of a simple contract, serving as an excellent starting point for creating your own.
+This example illustrates the fundamental structure of a simple contract, serving as a good starting point for creating your own.
 
 ## WIT Interface
-The WIT file (`contract/wit/contract.wit`) defines the `contract` world:
-- Includes `kontor:built-in` via the `wit/deps` symlink.
+- Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink.
 - Exports:
-  - `init`: Runs on contract publication.
-  - `hello-world`: Returns a string, using `view-context`.
+  - `init`: All contracts must implement an `init` function which will be ran automatically at publication.
+  - `hello-world`: A simple view function that returns a string.
 
 ```wit
 package kontor:contract;
@@ -27,7 +26,7 @@ world contract {
 ```
 
 ## Rust Implementation
-In `contract/src/lib.rs`, the `contract!` macro sets the contract name. The `HelloWorld` struct is automatically derived from it. The generated `Guest` trait is implemented with:
+In `contract/src/lib.rs`, the `contract!` sets the contract name and generates boilerplate code and types. The `HelloWorld` struct is automatically derived from it. The generated `Guest` trait is implemented with:
 - `init`: Empty, as no contract storage is needed.
 - `hello-world`: Returns a static string.
 
@@ -49,8 +48,7 @@ impl Guest for HelloWorld {
 The test in `test/src/lib.rs`:
 - The `use testlib::*` import populates the namespace with trait implementations and types to make testing contracts as close to calling Rust functions as possible.
 - `contract_bytes()` loads the bytes of the `hello-world` contract.
-- `import!` generates a module named `hello_world` that exposes functions matching the contract's exports, providing a convenient interface for interacting with the contract.
-  - `test = true` sets the macro to test mode. It can be used inside contract implementations to "import" and use other published contracts when this argument is omitted.
+- `import!` generates a module named `hello_world` (the snake case version of the `name` `hello-world`) that exposes functions matching the contract's exports, providing a convenient interface for interacting with it.
 - Calls `hello_world`, and verifies the output.
 
 ```rust
@@ -63,7 +61,6 @@ mod tests {
         height = 0,
         tx_index = 0,
         path = "contract/wit",
-        test = true,
     );
 
     #[tokio::test]

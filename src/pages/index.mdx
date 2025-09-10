@@ -1,0 +1,17 @@
+---
+title: Sigil - Bitcoin Smart Contracts
+description: Build secure and efficient Bitcoin smart contracts with Sigil, powered by WebAssembly and the Kontor protocol.
+hide_table_of_contents: true
+---
+
+# Sigil
+
+Sigi is an embedded domain specific language for Bitcoin Smart Contracts. It provides a streamlined approach to building contracts on the Kontor metaprotocol, leveraging WebAssembly’s Component Model. Its minimal runtime primitives and userspace abstractions enable secure, gas-efficient contracts with a familiar development experience. Storage is isolated, cross-contract calls are convenient to perform while re-entrances are strictly prohibited, `fallback` hook enables support for contract versioning via proxying.
+
+The zip provided to you includes five example contracts demonstrating contract patterns from basic queries to dynamic proxying. Each example includes Rust code, WIT interfaces, and tests. Run `cargo test` in the `test/` directory (e.g., `sigil-example-contracts/hello-world/test`) to simulate blockchain execution and iterate quickly.
+
+[**Read the Introduction to Sigil**](/introduction) to lean more.
+
+## Get Started
+
+Follow the [Getting Started](/docs/getting-started) guide to set up your environment and explore `sigil-example-contracts`. Future test tooling will include live Kontor instances and client-side SDK integration with Bitcoin testnet for full blockchain validation.

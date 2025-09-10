@@ -1,16 +1,12 @@
 ---
-title: Vision for Sigil
+title: Introducing Sigil
 description: a description of what Sigil is and where it is going
 hide_table_of_contents: true
 ---
 
-# Sigil
+# Introduction
 
-## Introduction to Sigil
-
-Sigil is an embedded domain-specific language designed for blockchain smart contracts built on the WebAssembly (WASM) Component Model. Our vision is to create a secure, flexible, and developer-friendly language that leverages WASM’s portability and efficiency while introducing a modern, structured approach to contract development. Sigil aims to simplify smart contract programming by minimizing built-in primitives, encouraging userspace abstractions, and providing robust tooling through Rust’s ecosystem that make it similar to writing a web application.
-
-Currently, Sigil is in an early preview stage, with a functional implementation that includes core features like WASM Component integration, a minimal set of hooks and primitives, and a Rust SDK with ORM-like abstractions. This preview is ready for developers to explore, though some features, such as list support and more advanced storage querying, are still in development. Our roadmap includes enhancing storage capabilities, improving cross-contract interactions, and further refining the developer experience to help support complex use cases.
+Currently, Sigil is in an early preview stage, with a functional implementation that includes core features like WASM Component integration, a minimal set of hooks and primitives, and a Rust SDK with ORM-like abstractions. This preview is ready for developers to explore, though some features, such as list types and advanced querying for storage, are still in development. Our roadmap includes enhancing storage capabilities, creating more ways to test contracts i.e. clientside SDK against Bitcoin testnet, and further refining the developer experience to help support complex use cases.
 
 ## Core Architecture
 
@@ -34,7 +30,7 @@ Traditional WASM modules compiled from various languages produce self-contained 
 - **Future Component Imports**: The Component Model lays the foundation for importing other components for code reuse, though cross-contract calls currently use a foreign call primitive in an isolated execution context.
 - **WAVE Format**: SigilWasm uses the WASM Value Expression (WAVE) format for passing arguments and returning results, standardizing value types across languages compiled to WASM.
 - **Exported Function Conventions**: Exported functions in WIT files follow standard WIT types, with two additional conventions:
-  - **Hook-based Execution**: Functions with specific names serve as hooks.
+  - **Hook-based Execution**: Functions with specific names serve as hooks and are called under certain conditions and not explicitely by a user.
   - **Execution Context**: The first argument of every function is an execution context, defining its behavior and access rights.
 
 ## Key Features
@@ -43,8 +39,8 @@ Traditional WASM modules compiled from various languages produce self-contained 
 
 Sigil defines a minimal set of hooks to handle specific contract behaviors:
 
-- **`init` Hook**: Runs when a contract is published and is primarily used to set initial storage values or perform data migrations for contract upgrades; although, it supports arbitrary contract code execution.
-- **`fallback` Hook**: Accepts WAVE arguments and returns WAVE results. It’s called when no other function matches the call, primarily used to implement proxy contracts for versioning in userspace, similar to Solidity’s proxy contracts but implemented as a runtime hook.
+- **`init` Hook**: Runs when a contract is published and is primarily for setting initial storage values or perform data migrations for contract upgrades; although, it currently supports arbitrary contract code execution.
+- **`fallback` Hook**: Accepts WAVE arguments and returns WAVE results. It’s called when no other function matches the call, primarily used to implement proxy contracts for versioning in userspace, similar to how proxying is implemented in Solidity.
 
 ### Execution Contexts
 
@@ -58,6 +54,7 @@ Public functions in Sigil are "decorated" with one of three execution contexts, 
   - Callable via the API exposed by Kontor nodes.
 - **`fall` (Fallback) Context**:
   - Used exclusively for the `fallback` hook.
+  - Can be converted into other context types
 
 Both `proc` and `view` functions can be called within a single contract or across contracts via foreign calls, with static type safety in the SDK and runtime checks ensuring compliance with read-only or read-write rules. Unlike some blockchain languages, Sigil does not implicitly expose storage contents. Developers must explicitly create `view` functions to expose data, enabling fine-grained control for future migrations or upgrades. These functions can include arbitrary code, such as userspace authentication or authorization.
 
@@ -79,7 +76,7 @@ The Rust SDK abstracts these primitives into higher-level, ORM-like interfaces, 
 Sigil emphasizes userspace development through Rust traits and macros:
 
 - **Traits for Runtime Primitives**: The runtime implements traits for all primitives, allowing pure Rust libraries (including Sigil’s standard library) to operate independently of the runtime. Developers can implement in-memory versions of these traits for testing without relying on the SigilWasm runtime.
-- **Ordinary Rust Programming**: Rust macros make Sigil programming feel like writing a web application, with familiar abstractions.
+- **Ordinary Rust Programming**: Rust macros make Sigil programming feel simple and familiar.
 - **Private Helper Functions**: Non-exported functions (without WIT signatures) compile to regular WASM instructions, behaving like standard Rust functions.
 
 ### Storage and Versioning
@@ -130,3 +127,5 @@ The early preview of Sigil includes:
 - Gas tracking
 - Typescript SDK for interacting with contracts clientside
 - Full platform integration testing of contracts
+
+Continue to the [Getting Started](/docs/getting-started) guide go hands-on with Sigil.

@@ -83,7 +83,7 @@ const config: Config = {
         src: 'img/logo.svg',
       },
       items: [
-        { to: '/vision', label: 'Vision', position: 'left' },
+        { to: '/introduction', label: 'Introduction', position: 'left' },
         {
           type: 'docSidebar',
           sidebarId: 'docSidebar',

@@ -1,16 +1,17 @@
 ---
 sidebar_position: 1
+title: 1. Hello World
 ---
 
-# Hello World
+# Sigil "Hello World"
 
-This example illustrates the fundamental structure of a simple contract, serving as a good starting point for creating your own.
+This example illustrates the fundamental structure of a simple Sigil contract, serving as a good starting point for creating your own.
 
 ## WIT Interface
-- Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink.
+- Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink
 - Exports:
-  - `init`: All contracts must implement an `init` function which will be ran automatically at publication.
-  - `hello-world`: A simple view function that returns a string.
+  - `init`: All contracts must implement an `init` function which will be run automatically at publication
+  - `hello-world`: A simple view function that returns a string
 
 ```wit
 package kontor:contract;
@@ -27,8 +28,8 @@ world contract {
 
 ## Rust Implementation
 In `contract/src/lib.rs`, the `contract!` sets the contract name and generates boilerplate code and types. The `HelloWorld` struct is automatically derived from it. The generated `Guest` trait is implemented with:
-- `init`: Empty, as no contract storage is needed.
-- `hello-world`: Returns a static string.
+- `init`: Empty, as no contract storage is needed
+- `hello-world`: Returns a static string
 
 ```rust
 use stdlib::*;

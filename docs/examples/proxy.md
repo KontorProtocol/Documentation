@@ -1,5 +1,6 @@
 ---
 sidebar_position: 5
+title: 5. Proxy
 ---
 
 # Proxy
@@ -33,8 +34,8 @@ world contract {
 - `ProxyStorage` struct stores the `ContractAddress` using the `StorageRoot` macro:
 - `fallback`: Forwards WAVE-format expressions to the stored contract address via the `foreign::call` built-in, using `ctx.view_context()` for read-only access. The `foreign::call` built-in is what is used by the `import!` and `interface!` macros under the hood and it is *not* recommended to use it directly in most situations.
 - `fallback` accepts a `FallContext` which is distinct from `ProcContext` and `ViewContext` in that it can be turned into either one (the `proc_context` method returns `Option<ProcContext>` because the call may not have been made through a Bitcoin transaction)
-- `get-contract-address`: Retrieves the stored contract address.
-- `set-contract-address`: Updates the stored contract address.
+- `get-contract-address`: Retrieves the stored contract address
+- `set-contract-address`: Updates the stored contract address
 
 ```rust
 use stdlib::*;

@@ -85,9 +85,9 @@ Sigil's storage system is designed for simplicity, isolation, and predictable ga
 - **Gas Tracking**: The design avoids complex operations (e.g., SQL-like joins) to make gas consumption intuitive.
 - **Versioning**: Sigil supports userspace versioning through the `fallback` hook and proxy contracts. Developers can implement advanced upgrade mechanisms, such as DAO-like voting for safe upgrades, avoiding reliance on key-based upgrades that risk rug pulls. External calls to proxy contracts appear as standard contract calls, enhancing transparency.
 
-### Security Considerations
+### Safety
 
-Sigil simplifies reasoning about security compared to languages like Solidity by eliminating features like `delegatecall` and completely disallowing cross-contract calling cycles. However, developers should still follow the **Checks-Effects-Interactions (CEI)** pattern:
+Sigil simplifies reasoning about safety compared to languages like Solidity by eliminating features like `delegatecall` and completely disallowing cross-contract calling cycles. However, developers should still follow the **Checks-Effects-Interactions (CEI)** pattern:
 
 - **Check**: Verify conditions (e.g., sufficient funds)
 - **Effect**: Update storage (e.g., deduct funds)

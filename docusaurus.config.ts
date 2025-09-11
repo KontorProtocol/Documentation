@@ -7,7 +7,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'Sigil Development Group',
   tagline: 'A Next-Generation Framework for Smart Contracts on Bitcoin',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -54,16 +54,21 @@ const config: Config = {
     ],
   ],
 
+  stylesheets: [
+    'https://use.typekit.net/kxz6ynu.css'
+  ],
+
   themeConfig: {
     colorMode: {
       defaultMode: 'dark'
     },
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'Sigil',
+      title: 'Sigil Documentation',
       logo: {
-        alt: 'My Site Logo',
-        src: 'img/logo.svg',
+        alt: 'Sigil Logo',
+        src: 'img/logo-light.svg',
+        srcDark: 'img/logo-dark.svg',
       },
       items: [
       ],

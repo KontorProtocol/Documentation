@@ -1,9 +1,9 @@
 {
   "label": "Examples",
-  "position": 2,
+  "position": 3,
   "collapsed": false,
   "link": {
     "type": "doc",
-    "id": "examples/index"
+    "id": "examples/examples"
   }
 }

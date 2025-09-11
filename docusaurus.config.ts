@@ -42,11 +42,10 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: '/', // Docs at the root
+          routeBasePath: '/',
           sidebarPath: './sidebars.ts',
-          sidebarCollapsed: false, // Sidebar expanded by default
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
+          sidebarCollapsed: false,
+          breadcrumbs: false,
         },
         theme: {
           customCss: './src/css/custom.css',

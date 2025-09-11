@@ -42,6 +42,7 @@ const config: Config = {
       'classic',
       {
         docs: {
+          routeBasePath: '/', // Docs at the root
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -74,7 +75,6 @@ const config: Config = {
     colorMode: {
       defaultMode: 'dark'
     },
-    // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
       title: 'Sigil',
@@ -90,11 +90,6 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
-        // {
-        //   href: 'https://github.com/facebook/docusaurus',
-        //   label: 'GitHub',
-        //   position: 'right',
-        // },
       ],
     },
     footer: {

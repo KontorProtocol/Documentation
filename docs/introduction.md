@@ -1,12 +1,16 @@
 ---
-title: Introducing Sigil
-description: a description of what Sigil is and where it is going
-hide_table_of_contents: true
+sidebar_position: 1
+title: Introduction
+description: Introduction to Sigil
+hide_table_of_contents: false
 ---
 
 # Introduction
 
+
+
 Currently, Sigil is in an early preview stage, with a functional implementation that includes core features like WASM Component integration, a minimal set of hooks and primitives, and a Rust SDK with ORM-like abstractions. This preview is ready for developers to explore, though some features, such as list types and advanced querying for storage, are still in development. Our roadmap includes enhancing storage capabilities, creating more ways to test contracts i.e. clientside SDK against Bitcoin testnet, and further refining the developer experience to help support complex use cases.
+
 
 ## Core Architecture
 
@@ -21,12 +25,14 @@ Sigil is built on WebAssembly (WASM), which provides several key benefits for bl
 
 Unlike other WASM-based blockchain languages, Sigil is deeply integrated with the modern WebAssembly Component Model, providing a structured and interoperable approach to contract development.
 
+Sigil's minimal runtime primitives and userspace abstractions enable secure, gas-efficient contracts with a familiar development experience. Storage is isolated, cross-contract calls are convenient to perform while re-entrances are strictly prohibited, `fallback` hook enables support for contract versioning via proxying.
+
 ### WASM Components Model
 
 Traditional WASM modules compiled from various languages produce self-contained but unstructured files, making their contents opaque. The WASM Component Model introduces a language-agnostic structure, enhancing reusability and transparency. In Sigil:
 
 - **WIT Signatures**: Every SigilWasm contract includes a WebAssembly Interface Type (WIT) "header" file that explicitly exports all public functions in a standardized, high-level type language. This makes contracts more accessible to developers and tooling.
-- **Runtime Validation**: The WIT file is compiled into the WASM code, allowing the SigilWasm runtime to extract, validate the contract’s interface at runtime or for tooling purposes.
+- **Runtime Validation**: The WIT file is compiled into the WASM code, allowing the SigilWasm runtime to extract, validate the contract's interface at runtime or for tooling purposes.
 - **Future Component Imports**: The Component Model lays the foundation for importing other components for code reuse, though cross-contract calls currently use a foreign call primitive in an isolated execution context.
 - **WAVE Format**: SigilWasm uses the WASM Value Expression (WAVE) format for passing arguments and returning results, standardizing value types across languages compiled to WASM.
 - **Exported Function Conventions**: Exported functions in WIT files follow standard WIT types, with two additional conventions:
@@ -40,7 +46,7 @@ Traditional WASM modules compiled from various languages produce self-contained 
 Sigil defines a minimal set of hooks to handle specific contract behaviors:
 
 - **`init` Hook**: Runs when a contract is published and is primarily for setting initial storage values or perform data migrations for contract upgrades; although, it currently supports arbitrary contract code execution.
-- **`fallback` Hook**: Accepts WAVE arguments and returns WAVE results. It’s called when no other function matches the call, primarily used to implement proxy contracts for versioning in userspace, similar to how proxying is implemented in Solidity.
+- **`fallback` Hook**: Accepts WAVE arguments and returns WAVE results. It's called when no other function matches the call, primarily used to implement proxy contracts for versioning in userspace, similar to how proxying is implemented in Solidity.
 
 ### Execution Contexts
 
@@ -60,7 +66,7 @@ Both `proc` and `view` functions can be called within a single contract or acros
 
 ### Primitives
 
-Sigil’s runtime provides a minimal set of primitives to keep the virtual machine simple and secure, encouraging userspace abstractions:
+Sigil's runtime provides a minimal set of primitives to keep the virtual machine simple and secure, encouraging userspace abstractions:
 
 1. **Signer Access**: Available only in `proc` contexts, allows access to the signer of the current transaction.
 2. **Cross-Contract Calls**: A function for calling other contracts, contributing to the gas expenditure of the transaction.
@@ -75,17 +81,17 @@ The Rust SDK abstracts these primitives into higher-level, ORM-like interfaces, 
 
 Sigil emphasizes userspace development through Rust traits and macros:
 
-- **Traits for Runtime Primitives**: The runtime implements traits for all primitives, allowing pure Rust libraries (including Sigil’s standard library) to operate independently of the runtime. Developers can implement in-memory versions of these traits for testing without relying on the SigilWasm runtime.
+- **Traits for Runtime Primitives**: The runtime implements traits for all primitives, allowing pure Rust libraries (including Sigil's standard library) to operate independently of the runtime. Developers can implement in-memory versions of these traits for testing without relying on the SigilWasm runtime.
 - **Ordinary Rust Programming**: Rust macros make Sigil programming feel simple and familiar.
 - **Private Helper Functions**: Non-exported functions (without WIT signatures) compile to regular WASM instructions, behaving like standard Rust functions.
 
 ### Storage and Versioning
 
-Sigil’s storage system is designed for simplicity, isolation, and predictable gas usage:
+Sigil's storage system is designed for simplicity, isolation, and predictable gas usage:
 
 - **Primitive Operations**: Storage uses path-keyed `get` and `set` operations for basic types (e.g., integers, booleans, strings).
 - **ORM-like Macros**: The SDK provides macros for declaring persistent data types, including records, enums, non-recursive sum types, and built-in `Map` types. Nested fields can be accessed (e.g., `foo.bar.baz`) without retrieving entire structures.
-- **Isolation**: Each contract’s storage is isolated, with no equivalent to Ethereum’s `delegatecall`. This simplifies the mental model, treating foreign contract calls like web API calls.
+- **Isolation**: Each contract's storage is isolated, with no equivalent to Ethereum's `delegatecall`. This simplifies the mental model, treating foreign contract calls like web API calls.
 - **Gas Tracking**: The design avoids complex operations (e.g., SQL-like joins) to make gas consumption intuitive.
 - **Versioning**: Sigil supports userspace versioning through the `fallback` hook and proxy contracts. Developers can implement advanced upgrade mechanisms, such as DAO-like voting for safe upgrades, avoiding reliance on key-based upgrades that risk rug pulls. External calls to proxy contracts appear as standard contract calls, enhancing transparency.
 
@@ -130,4 +136,4 @@ The early preview of Sigil includes:
 
 ## Get Started
 
-Follow the [Getting Started](/docs/getting-started) guide to set up your environment and explore `sigil-example-contracts`. Future test tooling will include live Kontor instances and client-side SDK integration with Bitcoin testnet for full blockchain validation.
+Follow the [Getting Started](/getting-started) guide to set up your environment and explore `sigil-example-contracts`. Future test tooling will include live Kontor instances and client-side SDK integration with Bitcoin testnet for full blockchain validation.

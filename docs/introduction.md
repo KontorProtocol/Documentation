@@ -18,7 +18,7 @@ Planned features include:
 - Gas tracking
 - Events system
 - Typescript SDK for interacting with contracts clientside
-- Full integration with the Kontor Indexer 
+- Integration with the Kontor Indexer 
 
 ## Core Architecture
 
@@ -116,7 +116,3 @@ do_external_operations(); // Interaction
 ```
 
 Leveraging this pattern makes code easier to reason about and adds an additional defensive layer.
-
-## Get Started
-
-Follow the [Getting Started](/getting-started) guide to set up your environment and explore `sigil-example-contracts`. Future test tooling will include live Kontor instances and client-side SDK integration with Bitcoin testnet for full blockchain validation.

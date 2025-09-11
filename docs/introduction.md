@@ -7,9 +7,16 @@ hide_table_of_contents: false
 
 # Introduction
 
+Sigil is currently in *early-preview* and available to select developers for feedback and review. Developers can write smart contracts with Sigil, but not yet execute them with the Kontor Indexer or deploy them to a Bitcoin network.
 
-
-Currently, Sigil is in an early preview stage, with a functional implementation that includes core features like WASM Component integration, a minimal set of hooks and primitives, and a Rust SDK with ORM-like abstractions. This preview is ready for developers to explore, though some features, such as list types and advanced querying for storage, are still in development. Our roadmap includes enhancing storage capabilities, creating more ways to test contracts i.e. clientside SDK against Bitcoin testnet, and further refining the developer experience to help support complex use cases.
+Current roadmap:
+* Gas system
+* List types
+* Events system
+* Advanced storage querying 
+* Integration with Kontor Indexer 
+* Typescript SDK
+* Deployment to Bitcoin `testnet4` / `signet`
 
 
 ## Core Architecture

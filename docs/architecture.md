@@ -5,10 +5,9 @@ description: Sigil Architecture
 hide_table_of_contents: false
 ---
 
+# Sigil Architecture
 
-## Sigil Architecture
-
-### WebAssembly Runtime
+## WebAssembly Runtime
 
 Like many other smart contract frameworks, Sigil is built on WebAssembly (WASM), which provides several key benefits for blockchain smart contracts:
 
@@ -17,7 +16,7 @@ Like many other smart contract frameworks, Sigil is built on WebAssembly (WASM),
 
 Unlike other WASM-based blockchain languages, Sigil is deeply integrated with the modern **WebAssembly Component Model**, providing a structured and interoperable approach to contract development. Sigil's runtime primitives and userspace abstractions enable secure, gas-efficient contracts with a familiar development experience. Storage is isolated, cross-contract calls are convenient to perform (while re-entrances are strictly prohibited), and a `fallback` hook enables support for contract versioning via proxying.
 
-### WebAssembly Component Model
+## WebAssembly Component Model
 
 Traditional WASM modules compiled from other languages produce self-contained but unstructured files, making their contents opaque to other code modules. The WASM Component Model introduces a language-agnostic structure, enhancing reusability and transparency. In Sigil:
 
@@ -29,7 +28,7 @@ Traditional WASM modules compiled from other languages produce self-contained bu
   - **Hook-Based Execution**: Functions with specific names serve as hooks and are called under certain conditions and not explicitly by a user.
   - **Execution Context**: The first argument of every function is an execution context, defining its behavior and access rights.
 
-## Key Features
+# Key Features
 
 ### Hooks
 

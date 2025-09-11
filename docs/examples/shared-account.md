@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+title: 3. Shared Account
 ---
 
 # Shared Account
@@ -7,10 +8,10 @@ sidebar_position: 3
 This example demonstrates a simple multi-tenant shared account introducing static contract imports, complex storage structs, authorization logic, ID generation, and cross-contract calls.
 
 ## WIT Interface
-- `open`: Creates an account with a deposit and tenants, returning an ID or error.
-- `deposit`/`withdraw`: Modifies the account balance.
-- `balance`: Queries the account balance.
-- `tenants`: Lists account participants.
+- `open`: Creates an account with a deposit and tenants, returning an ID or error
+- `deposit`/`withdraw`: Modifies the account balance
+- `balance`: Queries the account balance
+- `tenants`: Lists account participants
 
 ```wit
 package kontor:contract;
@@ -39,10 +40,10 @@ world contract {
 - The `import!` macro generates an interface for cross-contract calls to the `token` contract, as seen in the test environment previously.
 - The `StorageRoot` macro, used for the root storage type, and the `Storage` macro, used for nested storage types in the `Account` struct, enable persistent storage.
 - `other_tenants` uses `Map<String, bool>` because the storage layer does not currently support list types, and `Map` provides a limited interface with the `keys` method for iteration. Even with a `List` type using a `Map` here could make sense. Instead of `bool` an `enum` or `struct` that defines the their "role" in the account could be written.
-- `authorized` Verifies procedure permissions.
-- `open`: Verifies token balance, generates an ID using `crypto::generate_id()`, sets the account, and transfers tokens to `ctx.contract_signer()`.
-- `deposit`/`withdraw`: Authorize the caller, verify balances, update storage, and call the token contract following CEI pattern.
-- `balance`/`tenants`: Query the storage for account details.
+- `authorized` Verifies procedure permissions
+- `open`: Verifies token balance, generates an ID using `crypto::generate_id()`, sets the account, and transfers tokens to `ctx.contract_signer()`
+- `deposit`/`withdraw`: Authorize the caller, verify balances, update storage, and call the token contract following CEI pattern
+- `balance`/`tenants`: Query the storage for account details
 
 ```rust
 use stdlib::*;

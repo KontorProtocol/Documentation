@@ -1,5 +1,6 @@
 ---
 sidebar_position: 2
+title: 2. Token
 ---
 
 # Token
@@ -8,15 +9,15 @@ This example demonstrates persistent storage, user balances, transactions, and e
 
 ## WIT Interface
 Imports types:
-- `signer`: Transaction sender (identity).
-- `error`: Failure handling.
-- `integer`: Amounts.
+- `signer`: Transaction sender (identity)
+- `error`: Failure handling
+- `integer`: Amounts
 
 and exports functions:
-- `init`: Initializes the contract.
-- `mint`: Adds tokens to the signer’s balance.
-- `transfer`: Moves tokens, potentially returning an error.
-- `balance`: Queries a balance.
+- `init`: Initializes the contract
+- `mint`: Adds tokens to the signer’s balance
+- `transfer`: Moves tokens, potentially returning an error
+- `balance`: Queries a balance
 
 ```wit
 package kontor:contract;

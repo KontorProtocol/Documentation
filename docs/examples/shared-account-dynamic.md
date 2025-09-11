@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+title: 4. Shared Account (Dynamic)
 ---
 
 # Shared Account Dynamic
@@ -10,9 +11,9 @@ This example uses the `interface!` macro and `ContractAddress` type to implement
 Import type `contract-address`
 
 and exports:
-- `open`: Creates an account for a specificied token and tenants.
-- `deposit`/`withdraw`: Modifies the account balance using the specified token contract.
-- `balance`/`tenants`: Queries the account balance or tenant list.
+- `open`: Creates an account for a specificied token and tenants
+- `deposit`/`withdraw`: Modifies the account balance using the specified token contract
+- `balance`/`tenants`: Queries the account balance or tenant list
 
 ```wit
 package kontor:contract;

@@ -169,27 +169,29 @@ body, h1, h2, h3, h4, h5, h6, p, a, li, td, th, button, input, textarea, select 
   background: var(--ifm-menu-color-background-active);
 }
 
-/* Footer adjustments */
+/* Simple footer with just copyright */
 .footer {
-  background: var(--sigil-black-sea);
-  color: var(--ifm-footer-color);
+  padding: 1.5rem 0;
+  text-align: center;
+  border-top: 1px solid rgba(115, 124, 149, 0.2);
+  margin-top: 3rem;
 }
 
+/* Dark mode footer */
 .footer--dark {
   background: var(--sigil-black-sea);
+  color: var(--sigil-white-cream);
+  border-top: 1px solid rgba(115, 124, 149, 0.1);
 }
 
-/* Footer container */
-.container.footer__container {
-  max-width: 1200px;
+[data-theme='dark'] .footer {
+  background: var(--sigil-black-sea);
+  color: var(--sigil-white-cream);
+  border-top-color: rgba(115, 124, 149, 0.1);
 }
 
-/* Center the copyright text */
-.footer__bottom {
-  text-align: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(115, 124, 149, 0.15);
+[data-theme='dark'] .footer__copyright {
+  color: var(--sigil-grey-light);
 }
 
 .footer__copyright {
@@ -197,50 +199,17 @@ body, h1, h2, h3, h4, h5, h6, p, a, li, td, th, button, input, textarea, select 
   font-size: 0.875rem;
   opacity: 0.8;
   letter-spacing: 0.02em;
+  margin: 0;
 }
 
-.footer__link-item {
-  color: var(--ifm-footer-color);
-  opacity: 0.8;
-  transition: all 0.2s ease;
-}
-
-.footer__link-item:hover {
-  color: var(--sigil-orange);
-  opacity: 1;
-}
-
-/* If we add footer links later, they'll be styled nicely */
-.footer__links {
-  margin-bottom: 2rem;
-}
-
-.footer__title {
-  color: var(--sigil-white-cream);
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.footer__item {
-  font-size: 0.95rem;
-  line-height: 2;
-}
-
-/* Light mode footer stays dark for contrast */
+/* Light mode footer */
 [data-theme='light'] .footer {
-  background: var(--sigil-black-sea);
-  color: var(--sigil-white-cream);
+  background: var(--sigil-white-cream);
+  color: var(--sigil-black-sea);
 }
 
 [data-theme='light'] .footer__copyright {
-  color: var(--sigil-grey-light);
-}
-
-[data-theme='light'] .footer__link-item {
-  color: var(--sigil-white-cream);
+  color: var(--sigil-grey);
 }
 
 /* Button styles - primary buttons use orange, secondary use grey */

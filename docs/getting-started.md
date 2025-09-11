@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Getting Started
@@ -29,10 +29,11 @@ Sigil is built with Rust, so you need the latest stable Rust version installed.
    rustup target add wasm32-unknown-unknown
    ```
 
-## Working with the Sigil Package
-You will receive a zip package containing two Rust workspaces. Follow these steps to get started:
+## Working with the Sigil ZIP Package
 
-1. **Unzip the Package**: Extract the zip file provided to you via messaging (e.g., Telegram). The extracted directory has the following structure:
+You will receive a ZIP package containing two Rust workspaces. Follow these steps to get started:
+
+1. **Unzip the Package**: Extract the ZIP file provided to you via messaging (e.g., Telegram). The extracted directory has the following structure:
    ```
    sigil-package/
    ├── Kontor/

@@ -171,17 +171,76 @@ body, h1, h2, h3, h4, h5, h6, p, a, li, td, th, button, input, textarea, select 
 
 /* Footer adjustments */
 .footer {
+  background: var(--sigil-black-sea);
   color: var(--ifm-footer-color);
+}
+
+.footer--dark {
+  background: var(--sigil-black-sea);
+}
+
+/* Footer container */
+.container.footer__container {
+  max-width: 1200px;
+}
+
+/* Center the copyright text */
+.footer__bottom {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(115, 124, 149, 0.15);
+}
+
+.footer__copyright {
+  color: var(--sigil-grey-light);
+  font-size: 0.875rem;
+  opacity: 0.8;
+  letter-spacing: 0.02em;
 }
 
 .footer__link-item {
   color: var(--ifm-footer-color);
   opacity: 0.8;
+  transition: all 0.2s ease;
 }
 
 .footer__link-item:hover {
   color: var(--sigil-orange);
   opacity: 1;
+}
+
+/* If we add footer links later, they'll be styled nicely */
+.footer__links {
+  margin-bottom: 2rem;
+}
+
+.footer__title {
+  color: var(--sigil-white-cream);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer__item {
+  font-size: 0.95rem;
+  line-height: 2;
+}
+
+/* Light mode footer stays dark for contrast */
+[data-theme='light'] .footer {
+  background: var(--sigil-black-sea);
+  color: var(--sigil-white-cream);
+}
+
+[data-theme='light'] .footer__copyright {
+  color: var(--sigil-grey-light);
+}
+
+[data-theme='light'] .footer__link-item {
+  color: var(--sigil-white-cream);
 }
 
 /* Button styles - primary buttons use orange, secondary use grey */

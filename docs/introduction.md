@@ -20,6 +20,12 @@ Planned features include:
 - Typescript SDK for interacting with contracts clientside
 - Integration with the Kontor Indexer 
 
+## Why Sigil?
+
+The primary goal of the Sigil framework is to make writing safe, secure smart contracts as easy and natural as possible. Unlike other smart contract frameworks, writing contracts in Sigil is designed to feel as much as possible like writing normal software, requiring developers to learn a minimum number of additional concepts and to jump through as few hoops as possible to write, deploy and run their contracts on Bitcoin with Kontor.
+
+Sigil notably leverages the WebAssembly Component Model to allow contracts link natively and with full type-safety. This provides deep integration with conventional IDEs and popular Rust tooling. It shifts errors to build-time, keeps determinism and gas behavior predictable, and reduces the trusted computing base. Sigil thus dramatically improves developer ergonomics while fully supporting an flexible and extensible ecosystem built on open standards.
+
 ## Core Architecture
 
 ### WebAssembly Runtime

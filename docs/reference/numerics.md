@@ -1,0 +1,24 @@
+---
+sidebar_position: ?
+title: Numerics
+---
+
+# Numbers and numeric operations
+
+## Number types and ranges
+
+Two number types are provided to the contracts, `Integer` and `Decimal`, providing integer and fixed-point decimal arithmetic respectively.
+
+`Decimal` supports up to 18 decimal places and can accurately represent values in the `±(2^256 - 1) / 10^18` range (`±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457.584_007_913_129_639_936`).
+
+`Integer` is capped to the same range with the decimal part truncated (`±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457`).
+
+## Arithmetic operations
+
+Both types supports basic arithmetic operations (`add`, `sub`, `mul` and `div`) as well as comparisons. In addition to this `Decimal` supports a range of more complex operations (`log10`, TBD).
+
+Basic operations can be performed using regular operators, so you can simply do things like `if a + b > c` with both types.
+
+## Checked arithmetic
+
+For checked arithmetic, use the respective methods implemented by the types, which return `Result<T, Error>` where `Error` will be `Error::Overflow` or `Error:DivByZero` if either of these conditions have occured.

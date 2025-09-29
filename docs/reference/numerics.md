@@ -1,5 +1,5 @@
 ---
-sidebar_position: ?
+sidebar_position: 5
 title: Numerics
 ---
 
@@ -22,3 +22,11 @@ Basic operations can be performed using regular operators, so you can simply do 
 ## Checked arithmetic
 
 For checked arithmetic, use the respective methods implemented by the types, which return `Result<T, Error>` where `Error` will be `Error::Overflow` or `Error:DivByZero` if either of these conditions have occured.
+
+Example:
+```
+match numbers::add_integer(a, b) {
+    case Ok(result) => ... // use result
+    case Err(err)   => ... // handle overflow error
+}
+```

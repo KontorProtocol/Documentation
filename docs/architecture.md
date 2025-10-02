@@ -84,6 +84,16 @@ Sigil's storage system is designed for simplicity, isolation, and predictable ga
 - **Gas Tracking**: The design avoids complex operations (e.g., SQL-like joins) to make gas consumption intuitive.
 - **Versioning**: Sigil supports userspace versioning through the `fallback` hook and proxy contracts. Developers can implement advanced upgrade mechanisms, such as DAO-like voting for safe upgrades, avoiding reliance on key-based upgrades that risk rug pulls. External calls to proxy contracts appear as standard contract calls, enhancing transparency.
 
+### Error Handling
+
+Sigil provides a robust error handling mechanism:
+
+- **Error Types**: Errors are represented as a custom `Error` type, which can be returned from functions.
+- **Error Propagation**: Errors can be propagated up the call stack using the `?` operator.
+- **Error Handling**: `Result`s can be handled using `match` expressions over `Ok` and `Err` variants or with the many other error handling strategies available in Rust.
+
+When a function returns an `Err` or `panic`s, all storage changes within that contract's storage are rolled back. In nested cross-contract calls, an `Err` from the called contract rolls back only its own storage changes, leaving the calling contract's storage updates intact unless it also returns an `Err` (i.e. propagating the error up the call stack). This mechanism provides contract authors with fine-grained control over error handling and storage state management. However, a panic anywhere in the call stack triggers a full rollback, rolling back all storage changes across all contracts in the execution.
+
 ### Safety
 
 Sigil simplifies reasoning about safety compared to languages like Solidity by eliminating features like `delegatecall` and completely disallowing cross-contract calling cycles. However, developers should still follow the **Checks-Effects-Interactions (CEI)** pattern:
@@ -92,7 +102,7 @@ Sigil simplifies reasoning about safety compared to languages like Solidity by e
 - **Effect**: Update storage (e.g., deduct funds)
 - **Interaction**: Perform external operations (e.g., cross-contract calls)
 
-For example: 
+For example:
 
 ```rust
 check_sufficient_funds(); // Check

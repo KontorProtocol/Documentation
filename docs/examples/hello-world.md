@@ -71,5 +71,12 @@ mod tests {
                 .contracts(&[("hello-world", &contract_bytes().await?)])
                 .build(),
         )
-        .await
+        .await?;
+
+        let result = hello_world::hello_world(&runtime).await?;
+        assert_eq!(result, "Hello, World!");
+
+        Ok(())
+    }
+}
 ```

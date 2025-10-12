@@ -65,7 +65,6 @@
     {
       "group": "Examples",
       "pages": [
-        "docs/sigil/examples/index/index",
         "docs/sigil/examples/hello-world/hello-world",
         "docs/sigil/examples/token/token",
         "docs/sigil/examples/shared-account/shared-account",

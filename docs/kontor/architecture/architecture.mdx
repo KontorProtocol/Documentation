@@ -1,5 +1,6 @@
 ---
 title: Architecture and Consensus
+hide_table_of_contents: true
 ---
 
 As a metaprotocol on Bitcoin, Kontor uses "**embedded consensus":** metaprotocols derive state from an underlying blockchain without implementing their own consensus mechanism. Bitcoin miners order transactions and secure them with proof-of-work; Kontor indexers process those transactions according to additional rules. Because Bitcoin provides an immutable, timestamped log of all Kontor operations, and because Kontor's execution rules are deterministic, every indexer processing the same Bitcoin history arrives at the same state. There is no voting, no leader election, no validator set—only deterministic computation over a shared input stream.

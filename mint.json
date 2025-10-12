@@ -1,0 +1,61 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Sigil Documentation",
+  "logo": {
+    "light": "/img/img/logo-light.svg",
+    "dark": "/img/img/logo-dark.svg"
+  },
+  "favicon": "/img/img/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [],
+  "tabs": [
+    {
+      "name": "Documentation",
+      "url": "docs"
+    }
+  ],
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "docs/introduction/introduction",
+        "docs/getting-started/getting-started",
+        "docs/architecture/architecture"
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "docs/examples/index/index",
+        "docs/examples/hello-world/hello-world",
+        "docs/examples/shared-account/shared-account",
+        "docs/examples/shared-account-dynamic/shared-account-dynamic",
+        "docs/examples/token/token",
+        "docs/examples/amm/amm",
+        "docs/examples/pool/pool",
+        "docs/examples/proxy/proxy"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "docs/reference/implementation/implementation",
+        "docs/reference/move/move",
+        "docs/reference/numerics/numerics",
+        "docs/reference/testing/testing",
+        "docs/reference/alkanes/alkanes"
+      ]
+    }
+  ],
+  "footerSocials": {},
+  "analytics": {}
+}

@@ -64,11 +64,11 @@ Generates unique IDs for entities (e.g., account IDs).
 
 ### `crypto::hash(String) -> (String, Vec<u8>)`
 
-Applies sha265 hash to the string and returns a hex encoded string of the hash and the hash in raw bytes.
+Applies sha256 hash to the string and returns a hex encoded string of the hash and the hash in raw bytes.
 
 ### `crypto::hash_with_salt(data: String, salt: String) -> (String, Vec<u8>)`
 
-Applies sha265 hash to the string concatenated with the salte and returns a hex encoded string of the hash and the hash in raw bytes.
+Applies sha256 hash to the string concatenated with the salt and returns a hex encoded string of the hash and the hash in raw bytes.
 
 ### `Error::new(&str)`
 
@@ -76,7 +76,7 @@ Creates custom errors for result types in transaction failures.
 
 ## Contract Macro
 
-`contract!(name = "name")`: Defines the contract name and generates boilerplate Rust code based on the contract's WIT filekj.
+`contract!(name = "name")`: Defines the contract name and generates boilerplate Rust code based on the contract's WIT file.
 
 ## Import Macro
 

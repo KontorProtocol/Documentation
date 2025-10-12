@@ -1,0 +1,64 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      fill: #9ca3af;
+      font-size: 15px;
+    }
+  </style>
+  
+  <g transform="translate(450, 300)">
+    <!-- Ecosystem and Growth 37.5% (blue) -->
+    <path d="M 0,-150 A 150,150 0 0 1 106.07,106.07 L 70.71,70.71 A 100,100 0 0 0 0,-100 Z" 
+          fill="#6BA6E8" />
+    
+    <!-- Team 20% (orange) -->
+    <path d="M 106.07,106.07 A 150,150 0 0 1 -68.10,133.65 L -45.40,89.10 A 100,100 0 0 0 70.71,70.71 Z" 
+          fill="#E89A6B" />
+    
+    <!-- Public Token Sale 15% (tan) -->
+    <path d="M -68.10,133.65 A 150,150 0 0 1 -148.15,23.47 L -98.77,15.65 A 100,100 0 0 0 -45.40,89.10 Z" 
+          fill="#E8C96B" />
+    
+    <!-- Airdrop 10% (green) -->
+    <path d="M -148.15,23.47 A 150,150 0 0 1 -133.65,-68.10 L -89.10,-45.40 A 100,100 0 0 0 -98.77,15.65 Z" 
+          fill="#8BD99F" />
+    
+    <!-- Private Investors 10% (pink) -->
+    <path d="M -133.65,-68.10 A 150,150 0 0 1 -68.10,-133.65 L -45.40,-89.10 A 100,100 0 0 0 -89.10,-45.40 Z" 
+          fill="#E89BB5" />
+    
+    <!-- Foundation 7.5% (purple) -->
+    <path d="M -68.10,-133.65 A 150,150 0 0 1 0,-150 L 0,-100 A 100,100 0 0 0 -45.40,-89.10 Z" 
+          fill="#C9A8E8" />
+    
+    <!-- Center hole -->
+    <circle cx="0" cy="0" r="100" fill="#1f2937" />
+    
+    <!-- Labels with connecting lines -->
+    
+    <!-- Ecosystem and Growth -->
+    <line x1="124" y1="-49" x2="194" y2="-80" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="204" y="-75" text-anchor="start">Ecosystem and Growth 37.5 (37.5%)</text>
+    
+    <!-- Team -->
+    <line x1="60" y1="125" x2="33" y2="207" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="43" y="212" text-anchor="start">Team  20 (20%)</text>
+    
+    <!-- Public Token Sale -->
+    <line x1="-115" y1="95" x2="-170" y2="123" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="-180" y="128" text-anchor="end">Public Token Sale  15 (15%)</text>
+    
+    <!-- Airdrop -->
+    <line x1="-145" y1="0" x2="-207" y2="-33" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="-217" y="-28" text-anchor="end">Airdrop  10 (10%)</text>
+    
+    <!-- Private Investors -->
+    <line x1="-105" y1="-105" x2="-148" y2="-148" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="-158" y="-143" text-anchor="end">Private Investors  10 (10%)</text>
+    
+    <!-- Foundation -->
+    <line x1="-38" y1="-145" x2="-49" y2="-204" stroke="#9ca3af" stroke-width="1" opacity="0.5" />
+    <text x="-59" y="-199" text-anchor="end">Foundation  7.5 (7.5%)</text>
+  </g>
+</svg>

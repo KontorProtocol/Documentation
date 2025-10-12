@@ -1,0 +1,95 @@
+graph LR
+    subgraph OrdinalCommit["Ordinal Commit Transaction"]
+        OC_IN[Funding Input]
+        OC_OUT[ScriptPubKey]
+        OC_IN --> OC_OUT
+        style OC_OUT fill:#aec6cf
+    end
+    
+    subgraph OrdinalReveal["Ordinal Reveal Transaction"]
+        direction TB
+        OR_INPUTS["<b>Inputs</b>"]
+        OR_OUTPUTS["<b>Outputs</b>"]
+        OR_IN1["Script:<br/>x-only public key<br/><b>ORDINAL INSCRIPTION</b><br/>p: 'kor'<br/>content_hash<br/>content_type"]
+        OR_OUT1["ScriptPubKey<br/><b>Script Path Spend</b>"]
+        OR_OUT2["Change<br/><b>Key Path Spend</b>"]
+        OR_INPUTS -.-> OR_IN1
+        OR_IN1 --> OR_OUT1
+        OR_IN1 --> OR_OUT2
+        OR_OUT1 -.-> OR_OUTPUTS
+        OR_OUT2 -.-> OR_OUTPUTS
+        style OR_IN1 fill:#c1e1c1
+        style OR_OUT1 fill:#aec6cf
+    end
+    
+    subgraph SwapCommit["Swap Commit Transaction"]
+        SC_IN[Funding Input]
+        SC_OUT[ScriptPubKey]
+        SC_IN --> SC_OUT
+        style SC_OUT fill:#aec6cf
+    end
+    
+    subgraph SwapReveal["Swap Reveal Transaction"]
+        direction TB
+        SR_INPUTS["<b>Inputs</b>"]
+        SR_OUTPUTS["<b>Outputs</b>"]
+        SR_IN1["Script:<br/>x-only public key<br/><b>SWAP</b>"]
+        SR_IN2[Funding Input]
+        SR_OUT1["Price Output"]
+        SR_OUT2["OP_RETURN<br/>x-only public key"]
+        SR_OUT3["Change<br/>(KOR tokens)"]
+        SR_SELLER["Seller<br/>PSBT"]
+        SR_BUYER["Buyer Inputs<br/>and Outputs"]
+        SR_INPUTS -.-> SR_IN1
+        SR_INPUTS -.-> SR_IN2
+        SR_IN1 --> SR_OUT1
+        SR_IN1 --> SR_OUT2
+        SR_IN1 --> SR_OUT3
+        SR_OUT1 -.-> SR_SELLER
+        SR_OUT2 -.-> SR_BUYER
+        SR_OUT3 -.-> SR_BUYER
+        style SR_IN1 fill:#c1e1c1
+        style SR_OUT2 fill:#e6e6e6
+        style SR_OUT3 fill:#aec6cf
+    end
+    
+    subgraph StorageCommit["Storage Commit Transaction"]
+        SAC_IN1[KOR UTXO]
+        SAC_IN2[Funding Input]
+        SAC_OUT[ScriptPubKey]
+        SAC_IN1 --> SAC_OUT
+        SAC_IN2 --> SAC_OUT
+        style SAC_OUT fill:#aec6cf
+    end
+    
+    subgraph StorageReveal["Storage Reveal Transaction"]
+        direction TB
+        SAR_INPUTS["<b>Inputs</b>"]
+        SAR_OUTPUTS["<b>Outputs</b>"]
+        SAR_IN1["Script:<br/>x-only public key<br/><b>STORAGE AGREEMENT</b>"]
+        SAR_IN2[Funding Input]
+        SAR_OUT1["Storage Node 1<br/>KOR Payment"]
+        SAR_OUT2["Storage Node 2<br/>KOR Payment"]
+        SAR_OUT3["Storage Node N<br/>KOR Payment"]
+        SAR_OUT4["OP_RETURN<br/>Agreement Data"]
+        SAR_OUT5[Change]
+        SAR_INPUTS -.-> SAR_IN1
+        SAR_INPUTS -.-> SAR_IN2
+        SAR_IN1 --> SAR_OUT1
+        SAR_IN1 --> SAR_OUT2
+        SAR_IN1 --> SAR_OUT3
+        SAR_IN1 --> SAR_OUT4
+        SAR_IN1 --> SAR_OUT5
+        SAR_OUT1 -.-> SAR_OUTPUTS
+        SAR_OUT2 -.-> SAR_OUTPUTS
+        SAR_OUT3 -.-> SAR_OUTPUTS
+        SAR_OUT4 -.-> SAR_OUTPUTS
+        SAR_OUT5 -.-> SAR_OUTPUTS
+        style SAR_IN1 fill:#c1e1c1
+        style SAR_OUT4 fill:#e6e6e6
+    end
+    
+    OC_OUT -.->|"Script Path Spend"| OrdinalReveal
+    SC_OUT -.->|"Script Path Spend"| SwapReveal
+    SAC_OUT -.->|"Script Path Spend"| StorageReveal
+    SR_OUT3 -.->|"Funds Storage"| SAC_IN1

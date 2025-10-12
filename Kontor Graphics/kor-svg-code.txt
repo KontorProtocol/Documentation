@@ -1,0 +1,74 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .axis-label { font-size: 12px; fill: #64748b; }
+    .title { font-size: 18px; font-weight: 600; fill: #1e293b; }
+    .legend-text { font-size: 12px; fill: #334155; }
+  </style>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">KOR Cryptocurrency Supply Growth</text>
+  <text x="400" y="50" text-anchor="middle" style="font-size: 11px; fill: #64748b;">10-Year Projection at 2-5% Annual Growth</text>
+  
+  <!-- Grid lines -->
+  <g stroke="#e2e8f0" stroke-width="1" opacity="0.5">
+    <line x1="80" y1="400" x2="750" y2="400" />
+    <line x1="80" y1="357.14" x2="750" y2="357.14" />
+    <line x1="80" y1="314.29" x2="750" y2="314.29" />
+    <line x1="80" y1="271.43" x2="750" y2="271.43" />
+    <line x1="80" y1="228.57" x2="750" y2="228.57" />
+    <line x1="80" y1="185.71" x2="750" y2="185.71" />
+    <line x1="80" y1="142.86" x2="750" y2="142.86" />
+    <line x1="80" y1="100" x2="750" y2="100" />
+  </g>
+  
+  <!-- Axes -->
+  <line x1="80" y1="100" x2="80" y2="400" stroke="#94a3b8" stroke-width="2" />
+  <line x1="80" y1="400" x2="750" y2="400" stroke="#94a3b8" stroke-width="2" />
+  
+  <!-- Y-axis labels (1000 to 1700) -->
+  <text x="70" y="405" text-anchor="end" class="axis-label">1000</text>
+  <text x="70" y="362" text-anchor="end" class="axis-label">1100</text>
+  <text x="70" y="319" text-anchor="end" class="axis-label">1200</text>
+  <text x="70" y="276" text-anchor="end" class="axis-label">1300</text>
+  <text x="70" y="234" text-anchor="end" class="axis-label">1400</text>
+  <text x="70" y="191" text-anchor="end" class="axis-label">1500</text>
+  <text x="70" y="148" text-anchor="end" class="axis-label">1600</text>
+  
+  <!-- Y-axis title -->
+  <text x="30" y="250" text-anchor="middle" class="axis-label" transform="rotate(-90 30 250)">Supply (Millions of KOR)</text>
+  
+  <!-- X-axis labels (0 to 10 years) -->
+  <text x="80" y="420" text-anchor="middle" class="axis-label">0</text>
+  <text x="147" y="420" text-anchor="middle" class="axis-label">1</text>
+  <text x="214" y="420" text-anchor="middle" class="axis-label">2</text>
+  <text x="281" y="420" text-anchor="middle" class="axis-label">3</text>
+  <text x="348" y="420" text-anchor="middle" class="axis-label">4</text>
+  <text x="415" y="420" text-anchor="middle" class="axis-label">5</text>
+  <text x="482" y="420" text-anchor="middle" class="axis-label">6</text>
+  <text x="549" y="420" text-anchor="middle" class="axis-label">7</text>
+  <text x="616" y="420" text-anchor="middle" class="axis-label">8</text>
+  <text x="683" y="420" text-anchor="middle" class="axis-label">9</text>
+  <text x="750" y="420" text-anchor="middle" class="axis-label">10</text>
+  
+  <!-- X-axis title -->
+  <text x="415" y="450" text-anchor="middle" class="axis-label">Year</text>
+  
+  <!-- Gray area between 2% and 5% growth -->
+  <path d="M 80,400 L 147,391.43 L 214,382.69 L 281,373.77 L 348,364.67 L 415,355.39 L 482,345.93 L 549,336.28 L 616,326.43 L 683,316.39 L 750,306.15 L 750,130.62 L 683,163.72 L 616,195.38 L 549,225.53 L 482,254.25 L 415,281.59 L 348,307.64 L 281,332.45 L 214,356.07 L 147,378.57 L 80,400 Z" fill="#9ca3af" fill-opacity="0.3" />
+  
+  <!-- 2% Growth line (blue) -->
+  <path d="M 80,400 L 147,391.43 L 214,382.69 L 281,373.77 L 348,364.67 L 415,355.39 L 482,345.93 L 549,336.28 L 616,326.43 L 683,316.39 L 750,306.15" stroke="#3b82f6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- 5% Growth line (red) -->
+  <path d="M 80,400 L 147,378.57 L 214,356.07 L 281,332.45 L 348,307.64 L 415,281.59 L 482,254.25 L 549,225.53 L 616,195.38 L 683,163.72 L 750,130.62" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Legend -->
+  <g transform="translate(600, 470)">
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#3b82f6" stroke-width="2.5" />
+    <text x="35" y="4" class="legend-text">2% Growth</text>
+    
+    <line x1="120" y1="0" x2="150" y2="0" stroke="#ef4444" stroke-width="2.5" />
+    <text x="155" y="4" class="legend-text">5% Growth</text>
+  </g>
+</svg>

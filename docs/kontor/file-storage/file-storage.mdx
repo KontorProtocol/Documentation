@@ -13,7 +13,6 @@ Kontor's approach differs from that of other blockchain storage solutions in bot
 
 **File agreement creation.** A user prepares a file by applying Reed-Solomon erasure coding, which adds redundancy so the file can be recovered even if some data is lost. The encoded file is organized into a Merkle tree, and the tree's root serves as a cryptographic commitment to the entire file. The user creates a `FileAgreement` transaction containing this Merkle root, the file size, and signatures from at least a minimum number of storage nodes. Once confirmed on Bitcoin, the agreement becomes active—storage nodes hold the file data off-chain and begin earning rewards. The blockchain stores the metadata and the cryptographic commitments, but not the file contents themselves. In practice, users may use a “storage portal” service to automate the file preparation and signature-gathering steps. 
 
-![Kontor Data Storage Protocol](/img/data-storage-protocol.png)
 
 **Emissions and staking.** Each block, files generate KOR emissions. Files created earlier in the network's history receive slightly higher weights, ensuring valuable historical data remains attractive to store as the network grows. Emissions are distributed equally among the nodes storing each file. Storage nodes must stake KOR proportional to their commitments, with requirements designed to prevent Sybil attacks and ensure capital efficiency. Nodes wishing to exit agreements must pay fees that increase as a file's replication approaches its minimum threshold.
 

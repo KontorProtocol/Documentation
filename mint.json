@@ -55,11 +55,11 @@
       ]
     },
     {
-      "group": "Getting Started",
+      "group": "Basics",
       "pages": [
         "docs/sigil/introduction/introduction",
-        "docs/sigil/getting-started/getting-started",
-        "docs/sigil/architecture/architecture"
+        "docs/sigil/architecture/architecture",
+        "docs/sigil/getting-started/getting-started"
       ]
     },
     {
@@ -67,22 +67,22 @@
       "pages": [
         "docs/sigil/examples/index/index",
         "docs/sigil/examples/hello-world/hello-world",
+        "docs/sigil/examples/token/token",
         "docs/sigil/examples/shared-account/shared-account",
         "docs/sigil/examples/shared-account-dynamic/shared-account-dynamic",
-        "docs/sigil/examples/token/token",
+        "docs/sigil/examples/proxy/proxy",
         "docs/sigil/examples/amm/amm",
-        "docs/sigil/examples/pool/pool",
-        "docs/sigil/examples/proxy/proxy"
+        "docs/sigil/examples/pool/pool"
       ]
     },
     {
       "group": "Reference",
       "pages": [
         "docs/sigil/reference/implementation/implementation",
-        "docs/sigil/reference/move/move",
-        "docs/sigil/reference/numerics/numerics",
         "docs/sigil/reference/testing/testing",
-        "docs/sigil/reference/alkanes/alkanes"
+        "docs/sigil/reference/alkanes/alkanes",
+        "docs/sigil/reference/move/move",
+        "docs/sigil/reference/numerics/numerics"
       ]
     }
   ],

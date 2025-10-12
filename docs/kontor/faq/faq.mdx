@@ -1,8 +1,9 @@
 ---
 title: FAQ
+hide_table_of_contents: false
 ---
 
-# Comparison with Other Projects
+## Comparison with Other Projects
 
 **How is Kontor different from Stacks or Liquid sidechains?**
 
@@ -20,7 +21,7 @@ Alkanes and Kontor are both Bitcoin metaprotocols with WebAssembly smart contrac
 
 Move (used by Aptos and Sui) is a novel programming language with its own syntax, resource-oriented programming model, and tooling ecosystem. Learning Move means learning a new language with unfamiliar concepts like "abilities" and "acquires" declarations. Sigil is an embedded DSL in Rust: if you know Rust, you can write Sigil contracts immediately using familiar tools and libraries. For more information, see https://unspendablelabs.github.io/sigil-docs/reference/move.
 
-# BTC and KOR
+## BTC and KOR
 
 **Do I need KOR to use Kontor?**
 
@@ -30,7 +31,7 @@ Yes, for smart contract execution and file storage. KOR is the gas token that me
 
 BTC is intended to be the central unit of account for Kontor DeFi applications. Kontor allows its assets to be "attached" to Bitcoin UTXOs for trading with standard Bitcoin tools, then "detached" for use in smart contracts, so you can perform atomic swaps between BTC and Kontor assets, or between Kontor assets and other Bitcoin metaprotocol tokens like Runes or Counterparty assets. These swaps can be chained with contract calls in a single Bitcoin transaction.
 
-# File Storage
+## File Storage
 
 **Is file data really stored forever?**
 
@@ -40,7 +41,7 @@ The protocol is designed to sustain storage indefinitely through economic incent
 
 Yes. Storage nodes are just Kontor participants who commit to storing files and have sufficient KOR staked. The barrier to entry is simply storage capacity, bandwidth, and capital for staking. The protocol is permissionless—no one can prevent you from joining storage agreements or challenge you unfairly. Challenges are deterministic and verifiable by anyone watching the blockchain.
 
-# Smart Contracts on Kontor
+## Smart Contracts on Kontor
 
 **How do I deploy a smart contract?**
 
@@ -66,7 +67,7 @@ Install Rust and the Sigil SDK, then follow the getting started guide in the doc
 
 Yes. You can create NFT contracts using Sigil, with arbitrary metadata and custom logic for minting, transfers, royalties, and access control. The file persistence protocol provides decentralized storage for NFT assets—images, videos, or any other data—anchored to Bitcoin with proofs of availability. This combination gives you programmable NFT logic (smart contracts) and reliable long-term storage (file persistence) in one integrated system, usable by anyone in the Bitcoin ecosystem.
 
-# Bitcoin and Consensus
+## Bitcoin and Consensus
 
 **Is Kontor a Layer-2?**
 

@@ -2,24 +2,6 @@
 title: FAQ
 ---
 
-## Comparison with Other Projects
-
-**How is Kontor different from Stacks or Liquid sidechains?**
-
-Those are sidechains with their own consensus mechanisms, validators, and block production. Assets must be bridged on and off, creating trust assumptions and economic friction. Kontor has no separate consensus, no validators, and no bridge—it's just Bitcoin transactions interpreted with additional rules. This makes Kontor fundamentally synergistic with Bitcoin (more Kontor usage means more Bitcoin fees) rather than competitive.
-
-**How is Kontor different from Ordinals or Runes?**
-
-Ordinals and Runes are also metaprotocols, so they share Kontor's security model and Bitcoin-native properties. The difference is functionality: Ordinals assigns identities to satoshis, Runes tracks simple token balances, while Kontor supports full smart contracts with complex state, cross-contract calls, and off-chain file storage with on-chain proofs. Kontor is designed for sophisticated applications that require programmable logic beyond basic token transfers.
-
-**How is Kontor different from Alkanes?**
-
-Alkanes and Kontor are both Bitcoin metaprotocols with WebAssembly smart contracts, but they have very different functionality in practice. Architecturally, Alkanes is exclusively UTXO-based and builds partially on Runes infrastructure with no separate gas token. Kontor uses a hybrid accounts/UTXO model that supports both stateful smart contracts—avoiding the concurrency issues of Alkanes' purely UTXO-based system—and Bitcoin interoperability through atomic swaps. Kontor also has KOR as a native currency with tokenomics designed for gas metering and file storage incentives. For information on the differences in the smart contract systems, see [Kontor vs. Alkanes](/docs/sigil/reference/alkanes/alkanes).
-
-**How is Kontor different from Move-based chains?**
-
-Move (used by Aptos and Sui) is a novel programming language with its own syntax, resource-oriented programming model, and tooling ecosystem. Learning Move means learning a new language with unfamiliar concepts like "abilities" and "acquires" declarations. Sigil is an embedded DSL in Rust: if you know Rust, you can write Sigil contracts immediately using familiar tools and libraries. For more information, see [Kontor vs. Move](/docs/sigil/reference/move/move).
-
 ## BTC and KOR
 
 **Do I need KOR to use Kontor?**
@@ -95,3 +77,21 @@ When Bitcoin reorgs, indexers detect the reorganization and automatically adjust
 **Can I run my own indexer?**
 
 Of course! Running your own indexer provides the strongest security guarantees. The indexer software is open-source. You'll need to run or connect to a Bitcoin full node (for blockchain data) and have sufficient storage for the state database. Once synced, your indexer processes blocks and maintains protocol state locally. You can query your own indexer for contract state, verify that it matches public indexers, and submit transactions through it. Many users will rely on public indexers for convenience, but running your own is always an option.
+
+## Related Projects
+
+**How is Kontor different from Stacks or Liquid sidechains?**
+
+Those are sidechains with their own consensus mechanisms, validators, and block production. Assets must be bridged on and off, creating trust assumptions and economic friction. Kontor has no separate consensus, no validators, and no bridge—it's just Bitcoin transactions interpreted with additional rules. This makes Kontor fundamentally synergistic with Bitcoin (more Kontor usage means more Bitcoin fees) rather than competitive.
+
+**How is Kontor different from Ordinals or Runes?**
+
+Ordinals and Runes are also metaprotocols, so they share Kontor's security model and Bitcoin-native properties. The difference is functionality: Ordinals assigns identities to satoshis, Runes tracks simple token balances, while Kontor supports full smart contracts with complex state, cross-contract calls, and off-chain file storage with on-chain proofs. Kontor is designed for sophisticated applications that require programmable logic beyond basic token transfers.
+
+**How is Kontor different from Alkanes?**
+
+Alkanes and Kontor are both Bitcoin metaprotocols with WebAssembly smart contracts, but they have very different functionality in practice. Architecturally, Alkanes is exclusively UTXO-based and builds partially on Runes infrastructure with no separate gas token. Kontor uses a hybrid accounts/UTXO model that supports both stateful smart contracts—avoiding the concurrency issues of Alkanes' purely UTXO-based system—and Bitcoin interoperability through atomic swaps. Kontor also has KOR as a native currency with tokenomics designed for gas metering and file storage incentives. For information on the differences in the smart contract systems, see [Kontor vs. Alkanes](/docs/sigil/reference/alkanes/alkanes).
+
+**How is Kontor different from Move-based chains?**
+
+Move (used by Aptos and Sui) is a novel programming language with its own syntax, resource-oriented programming model, and tooling ecosystem. Learning Move means learning a new language with unfamiliar concepts like "abilities" and "acquires" declarations. Sigil is an embedded DSL in Rust: if you know Rust, you can write Sigil contracts immediately using familiar tools and libraries. For more information, see [Kontor vs. Move](/docs/sigil/reference/move/move).

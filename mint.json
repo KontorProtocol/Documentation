@@ -31,25 +31,25 @@
     {
       "group": "Introduction",
       "pages": [
-        "docs/kontor/introduction/introduction",
-        "docs/kontor/why-kontor/why-kontor",
-        "docs/kontor/how-it-works/how-it-works"
+        "docs/kontor/introduction",
+        "docs/kontor/why-kontor",
+        "docs/kontor/how-it-works"
       ]
     },
     {
       "group": "Core Concepts",
       "pages": [
-        "docs/kontor/architecture/architecture",
-        "docs/kontor/smart-contracts/smart-contracts",
-        "docs/kontor/file-storage/file-storage",
-        "docs/kontor/tokenomics/tokenomics",
-        "docs/kontor/security/security"
+        "docs/kontor/architecture",
+        "docs/kontor/smart-contracts",
+        "docs/kontor/file-storage",
+        "docs/kontor/tokenomics",
+        "docs/kontor/security"
       ]
     },
     {
       "group": "Resources",
       "pages": [
-        "docs/kontor/faq/faq",
+        "docs/kontor/faq",
         "docs/kontor/resources/whitepaper",
         "docs/kontor/resources/economic-model"
       ]
@@ -57,31 +57,31 @@
     {
       "group": "Basics",
       "pages": [
-        "docs/sigil/introduction/introduction",
-        "docs/sigil/architecture/architecture",
-        "docs/sigil/getting-started/getting-started"
+        "docs/sigil/introduction",
+        "docs/sigil/architecture",
+        "docs/sigil/getting-started"
       ]
     },
     {
       "group": "Examples",
       "pages": [
-        "docs/sigil/examples/hello-world/hello-world",
-        "docs/sigil/examples/token/token",
-        "docs/sigil/examples/shared-account/shared-account",
-        "docs/sigil/examples/shared-account-dynamic/shared-account-dynamic",
-        "docs/sigil/examples/proxy/proxy",
-        "docs/sigil/examples/amm/amm",
-        "docs/sigil/examples/pool/pool"
+        "docs/sigil/examples/hello-world",
+        "docs/sigil/examples/token",
+        "docs/sigil/examples/shared-account",
+        "docs/sigil/examples/shared-account-dynamic",
+        "docs/sigil/examples/proxy",
+        "docs/sigil/examples/amm",
+        "docs/sigil/examples/pool"
       ]
     },
     {
       "group": "Reference",
       "pages": [
-        "docs/sigil/reference/implementation/implementation",
-        "docs/sigil/reference/testing/testing",
-        "docs/sigil/reference/alkanes/alkanes",
-        "docs/sigil/reference/move/move",
-        "docs/sigil/reference/numerics/numerics"
+        "docs/sigil/reference/implementation",
+        "docs/sigil/reference/testing",
+        "docs/sigil/reference/alkanes",
+        "docs/sigil/reference/move",
+        "docs/sigil/reference/numerics"
       ]
     }
   ],

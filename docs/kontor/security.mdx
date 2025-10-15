@@ -1,6 +1,6 @@
 ---
 title: Security
-hide_table_of_contents: true
+mode: wide
 ---
 
 Kontor's security model has two primary components: Bitcoin's consensus mechanism and the correctness of the indexer implementation. Bitcoin provides transaction ordering, finality, and immutability—no one can rewrite history, censor transactions, or change the order of operations once blocks are confirmed. The indexer, on the other hand, simply provides deterministic execution—given the same transaction history, it computes the same protocol state. This means you trust that Bitcoin's proof-of-work secures the ledger, and you trust that the indexer software correctly implements Kontor's rules. You don't trust “validators”, “bridge operators”, “sequencers”, etc.—those don't exist in Kontor's architecture.

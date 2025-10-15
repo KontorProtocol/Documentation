@@ -91,6 +91,7 @@
     {
       "group": "Economics",
       "pages": [
+        "docs/economics/introduction",
         "docs/economics/perpetual",
         "docs/economics/node-economics",
         "docs/economics/network-health",

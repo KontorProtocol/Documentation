@@ -2,3 +2,41 @@
 sidebar_position: 5
 title: Long-Term Economic Dynamics
 ---
+
+## Dual-Token Equilibrium
+
+The protocol uses two tokens with fundamentally different purposes. BTC serves as the unit of account, the settlement asset, and the currency for pricing and trading. Users denominate value in BTC: a file costs $X$ satoshis to store, an asset trades at $Y$ satoshis, a service charges $Z$ satoshis. KOR serves as a metered resource for computational work (gas) and as the incentive mechanism for storage provision (emissions and stake requirements). This separation allows each token to have economics appropriate to its role.
+
+BTC is deflationary and scarce—properties that make it effective money but problematic as fuel. If smart contract gas were paid in BTC, the incentive structure for long-term storage would be difficult to sustain. Emissions in a deflationary currency create different dynamics than in an inflationary one: operators would need to forecast BTC appreciation when evaluating storage profitability, and the protocol would struggle to maintain adequate security budget as BTC becomes more valuable. Using BTC as fuel would also require Bitcoin users to spend their store-of-value asset for routine operations, creating psychological friction.
+
+KOR, on the other hand, is inflationary with dynamic adjustments—properties that make it not particularly well suited to serve as a store of value but which make it very effective as fuel and incentive mechanism. Users acquire KOR as needed for specific operations rather than holding it long-term. The atomic swap mechanism allows BTC holders to exchange for KOR and immediately use it for contract calls or storage fees within a single Bitcoin transaction confirmation. This removes friction from the user experience while preserving economic separation. The KOR/BTC exchange rate is market-determined, reflecting supply and demand dynamics.
+
+The dual-token structure provides an adjustment mechanism for protocol economics. If KOR inflation rises, market forces respond through the exchange rate: KOR becomes less valuable relative to BTC, making storage and smart contracts cheaper in BTC terms while maintaining the same KOR-denominated prices. This transfers inflation costs to KOR holders rather than to users who transact in BTC. The protocol's real security budget, measured in BTC terms, adjusts to market conditions rather than being rigidly fixed.
+
+## Network Maturity and Inflation
+
+The inflation rate at any time is determined by the balance between emissions and burns: $\mu(t) = (\varepsilon(t) - \Phi_{burned}(t)) / KOR_{total}(t)$ where $\varepsilon(t)$ represents total emissions and $\Phi_{burned}(t)$ represents total burns during that period. In the early network, emissions dominate and $\mu(t)$ remains positive at roughly 5-10% annually (before dynamic health adjustments). As the network evolves, several factors reduce inflation.
+
+First, emission tapering means new files contribute less to total emissions than early files. The growth rate of $\varepsilon(t)$ slows even as file count increases. Second, the user fee mechanism burns a fraction of each file's effective emission value upfront—each new file pays $\upsilon_f = \chi_{fee} \cdot k_f$, calibrated to represent multiple years of that file's emission allocation. This creates immediate deflation with each file creation that partially offsets ongoing inflation from existing files. Third, smart contract gas burns create increasingly significant deflationary pressure as application usage grows.
+
+The protocol is designed to remain moderately inflationary even in steady state, providing ongoing security budget for storage. The economic model projects that under reasonable growth assumptions—file creation growing then stabilizing, smart contract usage increasing, network health maintained—net inflation gradually declines from initial rates toward lower single digits over a period of years. The exact trajectory depends on exogenous factors including market conditions, application adoption rates, and competing platforms.
+
+The dynamic emission multiplier $\alpha(t)$ can disrupt this trajectory. If network health deteriorates and $\alpha(t)$ remains elevated or reaches $\alpha_{max}$ for extended periods, emissions increase and inflation rises. The protocol prioritizes maintaining file availability over controlling inflation, up to a point. Stress conditions may moderately increase inflation in exchange for preserving data availability guarantees.
+
+## Emission Tapering Mechanics
+
+A protocol promising perpetual storage faces an inflation problem: if emissions remain constant while file count grows without bound, either total emissions must increase proportionally (causing runaway inflation) or per-file emissions must decrease (eventually making storage unprofitable). Kontor addresses this through rank-based tapering, where each file's perpetual emission weight is fixed at creation time based on when it enters the network.
+
+The emission weight formula $\omega_f = \ln(s_{bytes}) / \ln(1 + rank_f)$ includes the file's creation rank in the denominator. Files created when the network is small receive permanently higher emission weights than identical files created later. A file created at rank 1,000 receives higher emissions than an identical file created at rank 1,000,000. This tapering occurs automatically without protocol changes or governance interventions.
+
+As the network grows and $\Omega(t) = \sum_f \omega_f$ increases, new files contribute proportionally less to the total. The growth rate of $\Omega(t)$ is sublinear—approximately $O(N \cdot \ln(\ln(N)))$ where $N$ is the total file count. Even as the network scales to billions of files, total emission weight grows slowly enough that per-file emissions for new files remain viable while total network emissions stay bounded relative to supply.
+
+Early storage nodes benefit by being "grandfathered" into higher reward tiers. A node joining when the network is small locks in higher emission weights on those early files permanently. This creates bootstrap incentives: early participants take on greater risk with unproven protocols and limited network effects, compensated through permanently higher returns. The mechanism aligns individual incentives with network growth—early nodes benefit as the network expands because their fixed high-weight files become relatively more valuable as new files arrive with lower weights.
+
+## Smart Contract Fees
+
+The protocol's economic model anticipates a structural shift as the network matures. Initially, file storage dominates activity: users create file agreements, storage nodes earn emissions, and burn mechanisms (user fees, leave fees, slashing) remain modest compared to emissions. The network is intentionally inflationary during this growth phase to attract storage providers and bootstrap data availability. Emissions rise with file creation, but rank-based tapering keeps growth rate manageable.
+
+Over time, smart contract activity becomes increasingly significant. The file storage layer reaches a mature state where new file creation rate stabilizes—not because the protocol limits it, but because addressable demand plateaus. Meanwhile, smart contract usage continues growing as applications are built and adopted. DeFi protocols, asset management systems, and on-chain markets generate transaction volume that scales with economic activity rather than data storage needs. Each smart contract call consumes gas, and all gas fees are burned.
+
+This transition is critical for long-term sustainability. Storage emissions must continue indefinitely to maintain file availability, but unbounded emission rate growth would lead to hyperinflation. The solution is not capping emissions, which would compromise storage guarantees, but developing sufficient burn rate from smart contracts to offset storage emissions. The economic model projects that mature network state involves storage emissions providing ongoing incentives for file availability while smart contract burns create comparable or greater deflationary pressure. Ultimately the users who burn fees for smart contract execution will be paying for perpetual storage indirectly. 

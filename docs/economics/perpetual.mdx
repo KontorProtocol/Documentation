@@ -3,8 +3,6 @@ sidebar_position: 1
 title: Perpetual Storage Economics
 ---
 
-## The Perpetual Storage Problem
-
 Traditional cloud storage operates on a subscription model: users pay monthly or annually, and if payments stop, data disappears. This model is incompatible with blockchain use cases, where assets and applications need to reference data that must remain available indefinitely. Storing data directly on Bitcoin is one solution—it's permanently available in the blockchain—but it's prohibitively expensive and imposes costs on the entire network. A file stored on-chain must be downloaded and validated by every full node forever. Kontor addresses this by separating data availability from blockchain storage: file metadata and cryptographic proofs anchor on Bitcoin, while the data itself lives off-chain with storage nodes who are economically incentivized to maintain it.
 
 The fundamental challenge is sustainability: how can a one-time upfront payment from a user fund perpetual storage? The naive approach would be to collect a large enough fee to cover expected storage costs forever, but this requires predicting future costs decades in advance and creates perverse incentives—nodes might prefer the protocol to fail early so they can claim the remaining endowment. Kontor instead treats storage as an ongoing service funded by continuous token emissions, with economic mechanisms designed to ensure rational operators find it profitable to store data long-term.

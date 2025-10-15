@@ -3,8 +3,6 @@ sidebar_position: 2
 title: Storage Node Economics
 ---
 
-## Operator Incentive Structure
-
 Storage nodes are modeled as rational economic actors seeking to maximize profit. The protocol does not rely on altruism or assume operators will act against their financial interests. Instead, it structures incentives so that profit-maximizing behavior aligns with protocol goals: storing files reliably and responding to challenges honestly. A node's decision to join, remain in, or exit a file agreement is determined by comparing the net present value of expected revenues against costs over some time horizon. If this calculation is positive, the node participates; if negative, it exits (when permitted) or declines to join.
 
 The protocol must ensure that for any file with sufficient replication, honest storage is more profitable than any alternative strategy—including storing nothing, storing partial data, or colluding with other nodes. This is achieved through a combination of ongoing rewards, capital lock-up requirements, and penalties for detectable misbehavior. The economic parameters are calibrated so that deviating from honest behavior either reduces expected revenue or increases risk beyond what rational operators will accept.

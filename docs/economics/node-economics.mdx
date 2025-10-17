@@ -33,7 +33,7 @@ When challenged, a node must decide whether to generate and submit a proof. The 
 
 ## The Sponsorship Market
 
-The sponsorship mechanism solves a bootstrapping problem: how do new nodes obtain file data when they don't already have it? Nodes cannot join a file agreement without being able to respond to challenges, which requires possessing the actual data. If all existing storers refuse to share, they create a permanent monopoly with no possibility of new entrants. The sponsorship market breaks this by making it profitable for existing storers to provide data to newcomers.
+The sponsorship mechanism solves a bootstrapping problem: how do new nodes obtain file data when they don't already have it? Nodes will not join a file agreement without being able to respond to challenges, which requires possessing the actual data. If all existing storers refuse to share, they create a permanent monopoly with no possibility of new entrants. The sponsorship market breaks this by making it profitable for existing storers to provide data to newcomers.
 
 A sponsorship agreement is an on-chain contract specifying the entrant, sponsor, file, commission rate $\gamma_{rate}$, and duration $\gamma_{duration}$. During the agreement, the entrant pays $\gamma_{rate}$ fraction of its file rewards to the sponsor. This creates a competitive market: multiple existing storers can offer to sponsor, competing on commission rates and terms. The equilibrium commission rate $\gamma_{eq}$ balances the sponsor's bandwidth cost against the NPV of the commission stream. For typical files and parameters, $\gamma_{eq}$ is low enough that entrants find sponsorship attractive while sponsors earn meaningful returns.
 

@@ -3,6 +3,10 @@ title: Smart Contracts
 mode: wide
 ---
 
+<div className="page-intro">
+Kontor brings WebAssembly contracts to Bitcoin with a best-in-class functionality and developer experience.
+</div>
+
 **Sigil is Kontor's smart contract framework.** Sigil is a next-generation WebAssembly-based framework for writing, deploying, and executing smart contracts on Bitcoin through the Kontor metaprotocol. It is designed to make contract development feel like writing normal software rather than learning a specialized domain-specific language. Developers who know Rust can write Sigil contracts with minimal additional concepts, using familiar tools like `cargo` and the Rust analyzer. Contracts compile to WebAssembly bytecode, which is then published to Bitcoin in a Kontor transaction and executed by indexers when called.
 
 **WebAssembly provides determinism and portability.** WebAssembly is a natural choice for blockchain smart contracts because it offers deterministic execution, efficient bytecode, and broad language support. However, most WASM-based blockchain platforms treat contracts as isolated modules with custom ABIs for host interaction—requiring developers to manually serialize data, manage dependencies, and coordinate interfaces through ad-hoc conventions. Sigil takes a different approach by adopting the WebAssembly Component Model, a standardized system for composing WASM modules with typed interfaces. This means contracts can call each other with full type safety, interfaces are specified in a language-agnostic IDL (WIT), and integration errors are caught at compile time rather than discovered when transactions fail on-chain.

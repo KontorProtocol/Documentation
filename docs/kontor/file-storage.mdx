@@ -3,6 +3,10 @@ title: File Storage
 mode: wide
 ---
 
+<div className="page-intro">
+A scalable perpetual file storage system that runs directly on the Bitcoin blockchain, incentivized by KOR emissions.
+</div>
+
 Storing large files directly in Bitcoin transactions imposes significant costs on the entire network, and this externalization of costs has made on-chain data storage a contentious subject within the Bitcoin community. Moreover, the high cost of embedding data on-chain also limits what's practical to store. Even with witness discounting, storing megabytes of data in Bitcoin transactions is expensive, and storing gigabytes is prohibitive. As a result, many projects today relies on centralized servers or systems like IPFS that don’t actually provide any availability guarantees.
 
 Kontor aims to solve both of these problems—and provide a viable alternative for scalable data storage on the Bitcoin network—with a storage *system* that operates entirely on Bitcoin while keeping the *stateless* data off-chain. The Bitcoin blockchain records the cryptographic commitments, storage agreements, and periodic proofs—all the stateful components of the system that require consensus and immutability, while the file contents themselves are held by storage nodes who are strongly economically incentivized through ongoing KOR emissions and penalized through slashing for failures. This architecture makes large-scale data storage economically practical and provides very strong guarantees of perpetual availability.

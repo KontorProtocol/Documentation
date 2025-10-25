@@ -1,3 +1,13 @@
+:root {
+  --primary-light: 86 170 154;
+  --background-dark: 24 28 35;
+}
+
+[data-theme="dark"] {
+  --background-color: rgb(var(--background-dark));
+  --background-primary: rgb(var(--background-dark));
+}
+
 .page-intro {
   font-size: 1.25rem;
   margin-bottom: 2rem;

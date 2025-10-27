@@ -104,6 +104,7 @@ validators
 sandboxed
 AMM
 AMMs
+NFTs
 
 # Bitcoin Protocols
 Ordinals

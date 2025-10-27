@@ -2,6 +2,54 @@
 canonicalized
 accessors
 Numerics
+mispriced
+IDE
+cellpacks
+keyspace
+TypeScript
+ORM
+functionality
+SDK
+DSL
+incentivize
+incentivizes
+incentivized
+incentivizing
+blockchain
+userspace
+runtime
+callee
+dApps
+satoshis
+toolchains
+auditability
+boolean
+enum
+reusability
+DSLs
+ABI
+ABIs
+deserialize
+deserializes
+deserializing
+composability
+blockchains
+whitepaper
+Whitepaper
+gatekeeping
+permissionless
+storers
+timeframe
+timeframes
+else's
+composable
+
+
+# File Storage
+k_f
+p_f
+F_n
+
 
 # Kontor Protocol Terms
 Kontor
@@ -11,6 +59,10 @@ Sigil
 # Bitcoin & Blockchain Terms
 Bitcoin
 BTC
+reentrancy
+keypaths
+PSBT
+PSBTs
 blockchain
 sidechain
 sidechains
@@ -19,7 +71,20 @@ metaprotocols
 UTXO
 UTXOs
 hashpower
+testnet
+signet
+regtest
 blockspace
+Merkle
+storer
+sublinear
+sublinearly
+boolean
+booleans
+enums
+architected
+deadweight
+supply-and
 
 # Blockchain Concepts
 rollup
@@ -34,13 +99,24 @@ WebAssembly
 WASM
 on-chain
 off-chain
+validator
 validators
 sandboxed
+AMM
+AMMs
 
 # Bitcoin Protocols
 Ordinals
 Runes
 Counterparty
+Aptos
+Protorunes
+Ethereum
+Filecoin
+Sia
+Metashrew
+Chia
+Chia's
 
 # Technical Terms
 cross-contract

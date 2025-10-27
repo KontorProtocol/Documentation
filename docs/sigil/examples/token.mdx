@@ -39,7 +39,7 @@ world contract {
 ```
 
 ## Rust Implementation
-- `TokenStorage` represents the contract’s persistent storage. The `StorageRoot` derive macro enables storage capabilities for the type and marks it as the "root" storage type. The root storage is accesible via a generated function: `storage`, which provides an ORM-like interface to contract functions. Every contract with storage must have exactly one type that derives `StorageRoot`.
+- `TokenStorage` represents the contract’s persistent storage. The `StorageRoot` derive macro enables storage capabilities for the type and marks it as the "root" storage type. The root storage is accessible via a generated function: `storage`, which provides an ORM-like interface to contract functions. Every contract with storage must have exactly one type that derives `StorageRoot`.
 - `Map` is a storage-enabled mapping type that can hold values of any type that also derive `Storage`. In this case, `Integer` is provided by `stdlib` and is storage-enabled.
 - The `ctx` parameter must be passed to every operation that performs a database call. These functions take an `impl ReadContext` or an `impl WriteContext`, depending on their behavior. `ProcContext` implements both, while `ViewContext` implements only `ReadContext`. This ensures state mutations occur only as the result of a transaction while allowing the same functions and methods to be used across procedures and views.
 

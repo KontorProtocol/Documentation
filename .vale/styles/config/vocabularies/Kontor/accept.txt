@@ -1,3 +1,8 @@
+# Words
+canonicalized
+accessors
+Numerics
+
 # Kontor Protocol Terms
 Kontor
 KOR
@@ -29,6 +34,8 @@ WebAssembly
 WASM
 on-chain
 off-chain
+validators
+sandboxed
 
 # Bitcoin Protocols
 Ordinals
@@ -49,3 +56,4 @@ emissions
 Alkanes
 perpetual storage
 dual-token
+

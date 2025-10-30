@@ -83,9 +83,10 @@
       "pages": [
         "docs/sigil/reference/implementation",
         "docs/sigil/reference/testing",
+        "docs/sigil/reference/numerics",
         "docs/sigil/reference/alkanes",
-        "docs/sigil/reference/move",
-        "docs/sigil/reference/numerics"
+        "docs/sigil/reference/brc2-0",
+        "docs/sigil/reference/move"
       ]
     },
     {

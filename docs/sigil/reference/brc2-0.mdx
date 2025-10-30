@@ -1,0 +1,40 @@
+---
+sidebar_position: 6
+title: Kontor vs. BRC2.0
+---
+# Kontor vs. BRC2.0
+
+Both BRC2.0 and Kontor both aim to bring programmability to Bitcoin with metaprotocol-based smart contract execution. Unlike Kontor, however:
+
+1. BRC-20 uses a port of the EVM for its contract runtime
+2. BRC-20 has more limited interoperability with Bitcoin itself
+3. Does not have a native gas currency
+
+Kontor uses a WebAssembly-based execution environment with typed WIT interfaces, purpose-built for Bitcoin rather than ported from Ethereum. Kontor also uses a hybrid UTXO model that supports deep interoperability with Bitcoin via the native chaining of PSBTs and atomic swaps. 
+
+# Smart Contracts
+
+## The EVM Compatibility Challenge
+
+BRC2.0's central design choice—using the EVM execution environment—aims to leverage Ethereum's large developer ecosystem and smart contract libraries. However, the constraints of running EVM on Bitcoin create significant compatibility limitations. The core issue is address translation: BRC2.0 maps Bitcoin addresses to EVM addresses via `keccak256(bitcoin_pkscript).slice(-40)`, which creates addresses that have no corresponding private keys. These addresses look like standard Ethereum addresses but cannot produce signatures verifiable by `ecrecover`. This affects:
+
+- Multisig wallets and contract-based accounts
+- Meta-transactions and gasless transaction patterns
+- EIP-712 typed signatures (used throughout DeFi)
+- Account abstraction schemes (ERC-4337)
+- Standard `permit()` functions on tokens
+
+BRC2.0 provides a BIP-322 signature verification precompile at address `0xfe`, but this requires rewriting any contract that performs signature verification. Existing Ethereum contracts, including widely-used protocols like Uniswap, Aave, and Safe, therefore need substantial modification to work in BRC2.0. The pattern of using `ecrecover` to verify signatures must be replaced with calls to the custom precompile. This means the benefit of leveraging existing Ethereum codebases is largely unrealized. Wallet integration also requires different infrastructure. Users cannot use MetaMask or standard Web3 wallets; they need Bitcoin wallets supporting BIP-322 signing, but this standard has very limited support.
+
+Beyond the compatibility issues, the EVM and Solidity have well-documented limitations that have driven the broader smart contract ecosystem toward WebAssembly over recent years. The EVM's design has been implicated in numerous high-profile exploits—reentrancy attacks (including the DAO hack), integer overflows, and complex gas optimization challenges. Solidity's implicit behaviors and limited type system make it difficult to write provably correct contracts. Kontor's Sigil framework has better security properties, more predictable execution costs, and access to mature programming language ecosystems.
+
+## The Bitcoin Integration Challenge
+
+BRC2.0 employs a two-layer architecture that separates the base BRC-20 protocol from the programmable module. Tokens must be explicitly deposited into the module via a `transfer` inscription to `OP_RETURN "BRC20PROG"`, where they become accessible to EVM contracts. To retrieve tokens, users must inscribe a `withdraw` operation and send it to their destination address. Within the module, contracts manipulate token balances through a pre-deployed `BRC20Controller` contract that implements ERC-20 compatibility. Kontor similarly requires explicit operations to bring assets into/out of contract scope. ATTACH operations commit assets to contract execution, and DETACH operations specify how resulting outputs should be distributed. The critical difference lies not in the basic deposit/withdraw pattern, but in how operations can be composed. BRC2.0's inscription-based model means each operation is isolated: inscribe data, send to `OP_RETURN`, wait for execution, then begin the next operation from scratch. Kontor's PSBT-based model enables atomic chaining of operations. Even though individual operations like ATTACH use commit-reveal patterns (two transactions), multiple operations can be constructed as a single PSBT where all parties sign their components upfront, and the entire chain broadcasts atomically.
+
+This isolation affects DeFi patterns significantly:
+
+- **Atomic arbitrage**: A sequence like swap-on-DEX-A → swap-on-DEX-B → profit requires multiple independent inscriptions, each of which could fail or be front-run.
+- **Multi-protocol compositions**: Cannot guarantee that a complex sequence (provide liquidity → stake LP tokens → claim rewards) executes as an atomic unit.
+
+Developers can build batching logic into individual contracts, but each EVM contract must be rewritten to explicitly implement batching support and, even then, the atomicity is limited to operations within a single contract call. By contrast, Kontor's PSBT-based model enables atomic operation chaining. While individual operations like ATTACH use commit-reveal patterns spanning multiple Bitcoin transactions, a key architectural feature of Kontor is that multiple operations can be constructed as a unified PSBT. All participants sign their components up-front, and the entire chain—ATTACH → contract execution → DETACH, or ATTACH → atomic swap → DETACH—broadcasts as an atomic sequence, enabling patterns that require multi-step atomicity and deterministic ordering. With Kontor the sequence is explicit in the transaction chain construction rather than dependent on miners; this reduces MEV opportunities and makes the outcome of multi-step operations much more predictable.

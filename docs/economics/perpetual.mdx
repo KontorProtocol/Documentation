@@ -1,0 +1,32 @@
+---
+sidebar_position: 1
+title: Perpetual Storage Economics
+---
+
+Traditional cloud storage operates on a subscription model: users pay monthly or annually, and if payments stop, data disappears. This model is incompatible with blockchain use cases, where assets and applications need to reference data that must remain available indefinitely. Storing data directly on Bitcoin is one solution—it's permanently available in the blockchain—but it's prohibitively expensive and imposes costs on the entire network. A file stored on-chain must be downloaded and validated by every full node forever. Kontor addresses this by separating data availability from blockchain storage: file metadata and cryptographic proofs anchor on Bitcoin, while the data itself lives off-chain with storage nodes who are economically incentivized to maintain it.
+
+The fundamental challenge is sustainability: how can a one-time upfront payment from a user fund perpetual storage? The naive approach would be to collect a large enough fee to cover expected storage costs forever, but this requires predicting future costs decades in advance and creates perverse incentives—nodes might prefer the protocol to fail early so they can claim the remaining endowment. Kontor instead treats storage as an ongoing service funded by continuous token emissions, with economic mechanisms designed to ensure rational operators find it profitable to store data long-term.
+
+## Emission-Based Incentives
+
+Storage nodes earn KOR through block emissions tied to the files they store. Each block, the protocol distributes newly minted KOR to storage nodes in proportion to the emission weights of the files they're storing. This creates a perpetual revenue stream: as long as the protocol exists and emits KOR, storage nodes have an economic reason to maintain their data. The system is designed so that for any rational operator, the net present value of future emissions exceeds the costs of storage, making it profitable to continue storing files indefinitely.
+
+Users pay a one-time fee when creating a file agreement, but this fee is entirely burned—it doesn't fund the storage directly. Instead, the fee serves two purposes: it prevents spam by imposing a cost barrier, and it creates deflationary pressure to offset the inflationary emissions. The actual incentive for storage comes from emissions, which scale with the total KOR supply and adjust dynamically based on network health. This separation of concerns—users pay to create scarcity, emissions fund the service—is what allows the system to function without predicting future economics.
+
+## Logarithmic Scaling and Emission Weights
+
+Each file receives an emission weight $\omega_f = \ln(s_{bytes}) / \ln(1 + rank)$, where $s_{bytes}$ is the file size in bytes and $rank$ is its creation order. This logarithmic relationship is a core design principle: the economic value of data is largely independent of its physical size. A 1 KB file containing a private key may be far more valuable than a 1 GB video file. Linear scaling would create a structural bias where large files dominate emissions, making small but critical files economically unattractive to store. Logarithmic scaling compresses the size difference: a 1 GB file has only about twice the emission weight of a 1 MB file, ensuring that storage nodes find both worth maintaining.
+
+The emission weight determines a file's share of total network emissions. Each block, total emissions $\varepsilon(t)$ are calculated based on current supply and network health, then distributed to files in proportion to their weights: $\varepsilon_f(t) = \varepsilon(t) \cdot (\omega_f / \Omega(t))$, where $\Omega(t)$ is the sum of all file weights. These file-level emissions are then split equally among the nodes storing that file. This proportional allocation means that a file's ongoing "cost" to the network (in terms of inflation) corresponds to its relative importance, not its absolute size.
+
+## Emission Tapering Through Rank
+
+The rank term in the emission weight formula—$\ln(1 + rank)$—creates a "grandfathering" effect where earlier files receive permanently higher rewards than later ones. A file created when the network has 1,000 files gets a higher weight than an identical file created when the network has 1,000,000 files. This is deliberate: as the network grows and total emissions increase, new files receive proportionally smaller shares, preventing runaway inflation. The system naturally tapers without requiring protocol upgrades or governance decisions.
+
+This rank-based tapering ensures that total emissions grow sublinearly with network size. Even as the network scales to billions of files, the aggregate emission rate remains bounded because each new file contributes less to $\Omega(t)$ than the previous one. Early storage nodes are rewarded for bootstrap risk, and the emission weight of their files becomes increasingly valuable relative to newer files. Meanwhile, new files remain profitable to store because their stake requirements (which are also based on emission weights) scale down proportionally with their emission potential.
+
+## Deflationary Mechanisms
+
+Emissions create inflation; burns create deflation. Kontor implements several burn mechanisms that remove KOR from circulation. When a user creates a file agreement, the entire storage fee $\upsilon_f$ is burned. When nodes voluntarily exit agreements, they pay a leave fee that is burned. When nodes are slashed for failing challenges, a portion ($\beta_{slash}$) of the slashed amount is burned, with the remainder redistributed to honest nodes. Most significantly, all gas fees from smart contract execution are burned.
+
+The interplay between emissions and burns determines long-term inflation. In the early network, storage-related burns (file creation, exits, slashing) dominate but remain relatively modest—the network is inflationary by design to incentivize growth. As the network matures and file creation slows, storage emissions stabilize while smart contract activity (and therefore gas burns) continues growing. The system is architected so that eventually, gas burns from a thriving application ecosystem offset storage emissions, bringing net inflation down even as the protocol continues to guarantee perpetual storage through ongoing rewards.

@@ -1,0 +1,13 @@
+---
+sidebar_position: 4
+title: Kontor vs. Move
+mode: wide
+---
+
+The biggest difference between the Sigil and Move smart contract systems is that Sigil is an embedded DSL in Rust designed to make writing contracts feel like writing regular Rust code. Sigil's emphasis is on simplicity, readability, and overall developer experience. Move, by contrast, is a novel DSL with Rust-like syntax that implements an idiosyncratic resource-oriented programming model designed to support greater theoretical performance and safety guarantees but requires learning a significant number of new concepts and implementing complex workflows to fit the Move model. Because of precisely these limitations, Move has split into at least two different main versions: Aptos Move and Sui Move, each of which has its own (significant) variations in programming model, and incompatible tooling. As such, the Move ecosystem is fragmented, and the tooling is even less mature than it would be otherwise.
+
+A significant fraction of Move's design quirks were introduced to support formal verification. Formal verification, while a very interesting technology, is not the silver bullet for code correctness that it is often made out to be. Verification of any meaningful amount of code is labor-intensive and highly technical, which explains its limited adoption up to the present day. Only a few Aptos Move dApps have used formal verification so far, and [Sui Move had no support until 2025](https://blog.sui.io/asymptotic-move-prover-formal-verification/). Even when formal verification is employed, it is usually practical to verify only a small core set of functions and simple properties they should exhibit.
+
+Along similar lines, while Move’s resource model makes it impossible to copy or implicitly drop assets—which does remove a class of bugs—it does not verify business intent in general. Mis‑scoped authorities, mispriced fees, incorrect caps, or time/sequence errors still compile and must be guarded explicitly. You also pay ceremony—abilities, `acquires`, and resource plumbing that ripple through refactors. In Move, explicitly declaring `acquires` shapes is a benefit for auditability and scheduling, but it adds significant friction to development.
+
+Overall, Sigil is much easier to write: it lets one author contracts as idiomatic Rust modules with a typed, multi‑method ABI defined in WIT. You work with familiar constructs (structs, methods, maps) and call signatures like `mint(ctx, n: integer)` or `balance(ctx, acc: string) -> option<integer>`. Testing feels like ordinary Rust: spin up an in‑memory runtime, call methods directly, assert results. Most mistakes surface as compiler errors or method‑signature mismatches rather than as byte‑level bugs at runtime.

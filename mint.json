@@ -1,0 +1,105 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Kontor Protocol Documentation",
+  "logo": {
+    "light": "/img/img/logo-light.svg",
+    "dark": "/img/img/logo-dark.svg"
+  },
+  "favicon": "/img/img/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#56AA9A",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#56AA9A"
+    }
+  },
+  "topbarLinks": [],
+  "tabs": [
+    {
+      "name": "Kontor Protocol",
+      "url": "docs/kontor"
+    },
+    {
+      "name": "Smart Contracts",
+      "url": "docs/sigil"
+    },
+    {
+      "name": "Economics",
+      "url": "docs/economics"
+    }
+  ],
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Introduction",
+      "pages": [
+        "docs/kontor/what-is-kontor",
+        "docs/kontor/why-kontor",
+        "docs/kontor/how-it-works"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "docs/kontor/architecture",
+        "docs/kontor/smart-contracts",
+        "docs/kontor/file-storage",
+        "docs/kontor/tokenomics",
+        "docs/kontor/security"
+      ]
+    },
+    {
+      "group": "Resources",
+      "pages": [
+        "docs/kontor/faq",
+        "docs/kontor/resources/whitepaper",
+        "docs/kontor/resources/economic-model"
+      ]
+    },
+    {
+      "group": "Basics",
+      "pages": [
+        "docs/sigil/introduction",
+        "docs/sigil/architecture",
+        "docs/sigil/getting-started"
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "docs/sigil/examples/hello-world",
+        "docs/sigil/examples/token",
+        "docs/sigil/examples/shared-account",
+        "docs/sigil/examples/shared-account-dynamic",
+        "docs/sigil/examples/proxy",
+        "docs/sigil/examples/amm",
+        "docs/sigil/examples/pool"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "docs/sigil/reference/implementation",
+        "docs/sigil/reference/testing",
+        "docs/sigil/reference/alkanes",
+        "docs/sigil/reference/move",
+        "docs/sigil/reference/numerics"
+      ]
+    },
+    {
+      "group": "Economics",
+      "pages": [
+        "docs/economics/introduction",
+        "docs/economics/perpetual",
+        "docs/economics/node-economics",
+        "docs/economics/network-health",
+        "docs/economics/economic-security",
+        "docs/economics/long-term-dynamics"
+      ]
+    }
+  ],
+  "footerSocials": {},
+  "analytics": {}
+}

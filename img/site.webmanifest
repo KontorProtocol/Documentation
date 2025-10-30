@@ -1,0 +1,14 @@
+{
+  "name": "Sigil Development Group",
+  "short_name": "Sigil",
+  "icons": [
+    {
+      "src": "/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#FF613A",
+  "background_color": "#181C23",
+  "display": "standalone"
+}

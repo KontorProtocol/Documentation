@@ -1,0 +1,101 @@
+---
+title: FAQ
+---
+
+<div className="page-intro">
+Questions about Kontor's architecture, smart contracts, file storage, and its relationship to Bitcoin and other protocols.
+</div>
+
+## BTC and KOR
+
+**Do I need KOR to use Kontor?**
+
+Yes, for smart contract execution and file storage. KOR is the gas token that meters computation and rewards storage nodes. However, you can acquire KOR through atomic swaps with BTC in the same transaction that calls a contract—it's a single operation from the user's perspective. BTC remains the unit of account and settlement currency; KOR is just the metered resource for protocol operations.
+
+**Can I use Bitcoin in Kontor applications?**
+
+BTC is intended to be the central unit of account for Kontor DeFi applications. Kontor allows its assets to be "attached" to Bitcoin UTXOs for trading with standard Bitcoin tools, then "detached" for use in smart contracts, so you can perform atomic swaps between BTC and Kontor assets, or between Kontor assets and other Bitcoin metaprotocol tokens like Runes or Counterparty assets. These swaps can be chained with contract calls in a single Bitcoin transaction.
+
+## File Storage
+
+**Is file data really stored forever?**
+
+The protocol is designed to sustain storage indefinitely through economic incentives. Storage nodes earn KOR emissions for maintaining files and are slashed for failures. The emission multiplier increases when network health declines, making storage more profitable and attracting new capacity. However, "forever" depends on the protocol's continued operation and economic viability. If KOR became worthless or Bitcoin ceased to function, storage would fail. Within the bounds of Bitcoin's own longevity, the economic model aims for perpetual availability.
+
+**Can anyone run a storage node?**
+
+Yes. Storage nodes are just Kontor participants who commit to storing files and have sufficient KOR staked. The barrier to entry is simply storage capacity, bandwidth, and capital for staking. The protocol is permissionless—no one can prevent you from joining storage agreements or challenge you unfairly. Challenges are deterministic and verifiable by anyone watching the blockchain.
+
+## Smart Contracts on Kontor
+
+**How do I deploy a smart contract?**
+
+Write your contract in Rust using the Sigil SDK, compile it to WebAssembly using `cargo build`, and deploy it through a Kontor transaction. The deployment transaction contains the compiled WASM bytecode in its witness data, embedded using the Taproot commit-reveal pattern. Once the transaction confirms on Bitcoin, the contract is live and can be called by anyone. The Kontor SDK handles the transaction construction and signing process.
+
+**How do I interact with deployed contracts?**
+
+Create a Kontor transaction that specifies the contract address, the function to call, and the arguments. The SDK provides a TypeScript/JavaScript interface that mirrors the contract's functions—calling a contract looks like calling a regular API. The SDK constructs the appropriate Bitcoin transaction, you sign it with your wallet, and it broadcasts to Bitcoin. When the transaction confirms, indexers execute the contract function and update state accordingly.
+
+**What programming languages can I use to write contracts?**
+
+Sigil contracts are currently written in Rust. The SDK provides macros and libraries that make contract development feel like writing normal Rust code. Because contracts compile to WebAssembly, other languages that target WASM will be able to be supported in the future—but only Rust has first-class tooling today. Future language support depends on community contributions and the maturity of WASM toolchains for other languages.
+
+**What are gas costs like?**
+
+Gas costs have two components: Bitcoin transaction fees (paid in BTC) and execution fees (paid in KOR). The BTC fee depends on transaction size and network conditions, typically covering ~200 bytes for a simple contract call. The KOR fee depends on computational complexity—reading storage is cheap, writing storage costs more, and cross-contract calls add overhead. Gas is metered during execution and deterministic: the same operation always costs the same amount. The SDK can estimate costs before submitting transactions.
+
+**How do I get started developing?**
+
+Install Rust and the Sigil SDK, then follow the [getting started guide](/docs/sigil/getting-started) in the documentation. The SDK includes example contracts (token, NFT, simple DeFi primitives) that demonstrate common patterns. The SDK provides testing utilities so you can write unit and integration tests that execute locally before deploying. Join the developer community for support and to see what others are building!
+
+**Does Kontor support NFTs?**
+
+Yes. You can create NFT contracts using Sigil, with arbitrary metadata and custom logic for minting, transfers, royalties, and access control. The file persistence protocol provides decentralized storage for NFT assets—images, videos, or any other data—anchored to Bitcoin with proofs of availability. This combination gives you programmable NFT logic (smart contracts) and reliable long-term storage (file persistence) in one integrated system, usable by anyone in the Bitcoin ecosystem.
+
+## Bitcoin and Consensus
+
+**Is Kontor a Layer-2?**
+
+No. Kontor is a metaprotocol, which means it operates entirely on Bitcoin itself rather than as a separate network. Every Kontor transaction is a Bitcoin transaction that gets included in Bitcoin blocks and secured by Bitcoin's hashpower. Layer-2s like sidechains and rollups have their own consensus mechanisms, validators, or proof systems. Kontor has none of these—it uses Bitcoin for consensus and derives additional state through deterministic indexer software.
+
+**How fast are Kontor transactions?**
+
+Kontor transactions confirm when Bitcoin blocks confirm—approximately 10 minutes on average, with six confirmations (~60 minutes) for high-value finality. This is the same as Bitcoin itself. There's no faster option because Kontor uses Bitcoin's consensus directly. For applications requiring faster confirmation, patterns like optimistic updates (assuming transaction success) can provide better UX while still settling on Bitcoin.
+
+**Does Kontor bloat Bitcoin's blockchain?**
+
+Kontor transactions use witness data (the same as Taproot transactions generally), which receives a 75% discount in block weight calculations. File storage metadata and proofs are compact—around 10 kB even when proving multiple files. The actual file data never touches Bitcoin. Smart contract state lives in indexer databases, not on-chain. Kontor's design minimizes blockchain impact while maximizing functionality, and every transaction pays appropriate fees to miners for the space it consumes.
+
+**Is Kontor compatible with existing Bitcoin infrastructure?**
+
+Yes. Kontor uses standard Bitcoin addresses (P2TR), works with Bitcoin wallets that support Taproot, and transactions can be constructed using PSBTs (Partially Signed Bitcoin Transactions). You can integrate Kontor with existing Bitcoin services, block explorers, and wallet infrastructure. Kontor also offers native interoperability with other Bitcoin metaprotocols—you can perform atomic swaps with Ordinals, Runes, and Counterparty assets in the same transaction that calls a Kontor contract.
+
+**What's the relationship between Kontor and Bitcoin miners?**
+
+Bitcoin miners don't need to understand Kontor anymore than they do other metaprotocols like Ordinals or Alkanes. They see Kontor transactions as standard Bitcoin transactions and include them in blocks for the same reasons they include any transaction: transaction fees. Kontor transactions pay BTC fees proportional to their weight, making them economically attractive to miners. More Kontor activity means more fee revenue for miners, aligning incentives.
+
+**What happens during a Bitcoin reorganization?**
+
+When Bitcoin reorgs, indexers detect the reorganization and automatically adjust. The indexer's database is append-only with rows indexed by block height, so handling reorgs is straightforward: delete all state rows above the reorg height and reprocess blocks from the common ancestor forward. Because execution is deterministic, reprocessing produces the same state that would have resulted if the new chain had been the main chain from the start.
+
+**Can I run my own indexer?**
+
+Of course! Running your own indexer provides the strongest security guarantees. The indexer software is open-source. You'll need to run or connect to a Bitcoin full node (for blockchain data) and have sufficient storage for the state database. Once synced, your indexer processes blocks and maintains protocol state locally. You can query your own indexer for contract state, verify that it matches public indexers, and submit transactions through it. Many users will rely on public indexers for convenience, but running your own is always an option.
+
+## Related Projects
+
+**How is Kontor different from Stacks or Liquid sidechains?**
+
+Those are sidechains with their own consensus mechanisms, validators, and block production. Assets must be bridged on and off, creating trust assumptions and economic friction. Kontor has no separate consensus, no validators, and no bridge—it's just Bitcoin transactions interpreted with additional rules. This makes Kontor fundamentally synergistic with Bitcoin (more Kontor usage means more Bitcoin fees) rather than competitive.
+
+**How is Kontor different from Ordinals or Runes?**
+
+Ordinals and Runes are also metaprotocols, so they share Kontor's security model and Bitcoin-native properties. The difference is functionality: Ordinals assigns identities to satoshis, Runes tracks simple token balances, while Kontor supports full smart contracts with complex state, cross-contract calls, and off-chain file storage with on-chain proofs. Kontor is designed for sophisticated applications that require programmable logic beyond basic token transfers.
+
+**How is Kontor different from Alkanes?**
+
+Alkanes and Kontor are both Bitcoin metaprotocols with WebAssembly smart contracts, but they have very different functionality in practice. Architecturally, Alkanes is exclusively UTXO-based and builds partially on Runes infrastructure with no separate gas token. Kontor uses a hybrid accounts/UTXO model that supports both stateful smart contracts—avoiding the concurrency issues of Alkanes' purely UTXO-based system—and Bitcoin interoperability through atomic swaps. Kontor also has KOR as a native currency with tokenomics designed for gas metering and file storage incentives. For information on the differences in the smart contract systems, see [Kontor vs. Alkanes](/docs/sigil/reference/alkanes).
+
+**How is Kontor different from Move-based chains?**
+
+Move (used by Aptos and Sui) is a novel programming language with its own syntax, resource-oriented programming model, and tooling ecosystem. Learning Move means learning a new language with unfamiliar concepts like "abilities" and "acquires" declarations. Sigil is an embedded DSL in Rust: if you know Rust, you can write Sigil contracts immediately using familiar tools and libraries. For more information, see [Kontor vs. Move](/docs/sigil/reference/move).

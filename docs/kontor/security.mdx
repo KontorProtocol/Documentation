@@ -1,0 +1,16 @@
+---
+title: Security
+mode: wide
+---
+
+<div className="page-intro">
+Kontor is 100% secured by Bitcoin miners---there are no "validators", "bridges", "sequences" or other trusted entities.
+</div>
+
+Kontor's security model has two primary components: Bitcoin's consensus mechanism and the correctness of the indexer implementation. Bitcoin provides transaction ordering, finality, and immutability—no one can rewrite history, censor transactions, or change the order of operations once blocks are confirmed. The indexer, on the other hand, simply provides deterministic execution—given the same transaction history, it computes the same protocol state. This means you trust that Bitcoin's proof-of-work secures the ledger, and you trust that the indexer software correctly implements Kontor's rules. You don't trust “validators”, “bridge operators”, “sequencers”, etc.—those don't exist in Kontor's architecture.
+
+**Verifiability.** If two indexers disagree about state, one of them is wrong, and the disagreement can be detected by anyone. You can run your own indexer to independently verify protocol state, or you can query someone else's indexer and spot-check critical operations by syncing portions of the blockchain yourself. This is different from sidechains where you must trust validators to honestly report state, or rollups where there is no guarantee of data availability. With Kontor, the complete protocol logic is in open-source software executing deterministically over public data.
+
+**Smart contract security.** Kontor contracts execute in a sandboxed WebAssembly runtime with several security properties. Gas metering prevents infinite loops and resource exhaustion—execution halts when gas is consumed, with side effects rolled back. Re-entrancy is prohibited at the level of the runtime, and cross-contract calls execute synchronously. Storage isolation ensures contracts cannot access each other's state except through explicit function calls with defined interfaces. Type safety catches many common errors at compile time—interface mismatches, incorrect storage types, and ABI incompatibilities fail during development rather than on-chain. The runtime is configured for determinism with threading disabled, SIMD off, and floating-point behavior canonicalized.
+
+**Storage network attacks.** The file persistence protocol is designed to resist several economic attacks. Storage nodes cannot profitably store only partial data—the challenge mechanism samples sectors randomly, and even 10% data loss has a 99.997% detection probability per challenge. Nodes cannot profitably collude to fail challenges and collect redistributed stake—the slashing formula ensures the colluding group always loses more than they gain. Sybil attacks (running many identities to compartmentalize risk or amplify rewards) are discouraged by a dynamic stake factor that makes small node operations capital-inefficient. Exit fees prevent nodes from abandoning files as they approach minimum replication thresholds. The emission multiplier creates counter-cyclical incentives that stabilize the network during stress.

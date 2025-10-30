@@ -1,0 +1,162 @@
+---
+sidebar_position: 5
+title: Kontor vs. Alkanes
+---
+# Kontor vs. Alkanes
+
+Conceptually, Alkanes and Kontor are very much aligned. Both are metaprotocols that bring programmability to Bitcoin with a WASM-based smart contract system. In practice, however, they are quite different to work with. Most significantly, Alkanes is:
+
+1. Fully reliant on Bitcoin’s UTXO model
+2. Does not have a gas currency
+3. Builds on top of Runes infrastructure
+
+Kontor, by contrast, has a **hybrid accounts/UTXO model** (first implemented in Counterparty), that supports interoperability with Bitcoin via PSBTs and atomic swaps. Kontor has a sophisticated tokenomics for its native currency, which is the basis for its gas system and provides incentives for perpetual Bitcoin-anchored file storage. Kontor’s Sigil smart contract framework emphasizes **clarity, ergonomics, and guardrails** with typed entrypoints, structured state, a testing-friendly design.
+
+# Smart Contracts
+
+## Programming Model and ABI
+
+With Alkanes, each contract implements a single WASM entrypoint and **manually dispatches on numeric opcodes**, parsing raw input bytes, and populating a response buffer. For each contract, you have to implement `AlkaneResponder::execute`, a required `__execute` export, and a `match` over integer opcodes, plus a **DIY key-value storage** layout built from “pointers” (string keypaths). This is a direct consequence of over-reliance on the “Protorunes” specification: method invocations are encoded as Protorunes messages in `OP_RETURN`, with inputs packed into “cellpacks.” That means all decoding, validation, and error reporting live in the custom opcode handlers.
+
+Sigil’s core idea—*first-class, typed contract methods*—makes contracts read like ordinary Rust services: multiple named entrypoints, explicit parameter and return types, and interface boundaries that the compiler can check. That yields self-documenting interfaces/ABIs, clear call sites, and predictable error surfaces. It also unlocks straightforward scaffolding (client SDKs, mocks, auto-generated bindings) without bespoke conventions, and Sigil makes malformed calls impossible to even *construct* in most client code. 
+
+## Storage
+
+Alkanes’ **string-keyed key-value storage** pushes a lot of design burden onto developers: you invent your own keyspace, document it, and keep it consistent across versions and tooling. A ledger becomes `"/balance/{addr}"`; a cap becomes `"/cap"`, etc. This is fine for small demos, but entropy accumulates in real projects, especially those with multiple authors.
+
+## Safety
+
+Alkanes contracts have **huge surface area**, so there’s a significant risk of reentrancy attacks, callee-controlled control flow, and the need for manual checks-effects-interactions discipline. Alkanes does provide a “call without side effects” mode, but that’s an opt-in pattern; the default is general side-effecting calls.
+
+Sigil’s typed, multi-entry interface encourages **capability scoping**—each method can enforce narrow invariants and accept strongly typed inputs. It also makes it natural to *ban or constrain risky cross-contract patterns* (e.g., reentrancy-enabling call cycles, which are simply disabled, or storage-context borrowing) at the framework layer.
+
+## Tooling, Testing, and DX
+
+A Sigil-style contract is just **Rust with a clean contract boundary.** The natural dev loop is `cargo test` against in-memory harnesses and method-level unit tests; your IDE and linter do the heavy lifting. Mocking callers and state is trivial; running hundreds of fast, pure tests per second is the norm. This is exactly what you want when tightening invariants, refactoring storage layouts, or reproducing edge cases.
+
+With Alkanes, you can test pure helper code natively, but **end-to-end testing typically requires a regtest stack** (Bitcoin Core + Metashrew + a key-value store). This makes it much harder to develop and test Alkanes contracts. Many failure modes only manifest with fully constructed Protorunes messages, UTXO selection, and witness envelopes.
+
+On the *interface* side, Sigil-style typed methods are **immediately discoverable** in code and in client SDKs; Alkanes’ numeric opcodes require you to shepherd a separate, human-maintained mapping (e.g., “77 = mint”), keep encoders/decoders in sync across languages, and document versioning conventions for opcodes and their byte layouts.
+
+## Performance and Resource Contention
+
+While Alkanes’ adoption of the Protorunes specification and its UTXO model nominally allows for parallel execution of contract calls, **every mutating call must be a real Bitcoin transaction,** each of which consumes at least one UTXO. In UTXO land, *each output can be spent exactly once* and conflicting spends must serialize; that’s a hard concurrency ceiling and a source of contention in busy workflows. This makes Alkanes unsuitable for building standard DeFi applications such as AMMs. The fact is that Bitcoin has ~10-minute blocks and **single-digit TPS** on-chain; the bottleneck for state-changing calls is the Bitcoin protocol, not CPU time inside an indexer.
+
+## Side-by-Side Comparison
+
+Below are two minimal “counter” contracts that expose the same three capabilities:
+
+- initialize the counter to 0
+- increment by `n`
+- read the current value
+
+---
+
+### Sigil — Counter Contract
+
+```wit
+// counter.wit
+package kontor:contract;
+
+world contract {
+    include kontor:built-in/built-in;
+    use kontor:built-in/context.{view-context, proc-context};
+    use kontor:built-in/numbers.{integer};
+
+    export init: func(ctx: borrow<proc-context>);
+    export inc: func(ctx: borrow<proc-context>, n: integer);
+    export get: func(ctx: borrow<view-context>) -> integer;
+}
+```
+
+```rust
+// counter.rs
+use stdlib::*;
+
+contract!(name = "counter");
+
+#[derive(Clone, Default, StorageRoot)]
+struct CounterStorage {
+    pub value: Integer,
+}
+
+impl Guest for Counter {
+    fn init(ctx: &ProcContext) {
+        // Initialize storage root and set value = 0
+        CounterStorage::default().init(ctx);
+        storage(ctx).value().set(ctx, Integer::from(0));
+    }
+
+    fn inc(ctx: &ProcContext, n: Integer) {
+        let s = storage(ctx);
+        let cur = s.value().get(ctx).unwrap_or_default();
+        s.value().set(ctx, cur + n);
+    }
+
+    fn get(ctx: &ViewContext) -> Integer {
+        storage(ctx).value().get(ctx).unwrap_or_default()
+    }
+}
+```
+
+---
+
+### Alkanes — Counter Contract
+
+```rust
+use anyhow::{anyhow, Result};
+use alkanes_runtime::runtime::AlkaneResponder;
+use alkanes_support::response::CallResponse;
+use alkanes_support::storage::StoragePointer;
+use metashrew_support::compat::{to_arraybuffer_layout, to_ptr};
+
+#[derive(Default)]
+pub struct Counter;
+
+impl Counter {
+    fn ptr(&self) -> StoragePointer {
+        StoragePointer::from_keyword("/counter")
+    }
+}
+
+impl AlkaneResponder for Counter {
+    fn execute(&self) -> Result<CallResponse> {
+        let context = self.context().ok_or_else(|| anyhow!("no context"))?;
+        let mut inputs = context.inputs.clone();
+        let mut resp = CallResponse::forward(&context.incoming_alkanes);
+
+        // 0 = init, 1 = inc(n), 2 = get()
+        match shift_or_err(&mut inputs)? {
+            0u128 => {
+                // init: set to 0
+                self.ptr().set_value::<u128>(0);
+                Ok(resp)
+            }
+            1u128 => {
+                // inc(n): parse n and add (u128 is the canonical doc type)
+                let n: u128 = shift_or_err(&mut inputs)?;
+                let cur: u128 = self.ptr().get_value::<u128>();
+                self.ptr().set_value::<u128>(cur.checked_add(n).ok_or_else(|| anyhow!("overflow"))?);
+                Ok(resp)
+            }
+            2u128 => {
+                // get(): return current value in little-endian bytes
+                let cur: u128 = self.ptr().get_value::<u128>();
+                resp.data = cur.to_le_bytes().to_vec();
+                Ok(resp)
+            }
+            _ => Err(anyhow!("unrecognized opcode")),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn __execute() -> i32 {
+    let mut bytes = to_arraybuffer_layout(&Counter::default().run());
+    to_ptr(&mut bytes) + 4
+}
+```
+
+---
+
+Even with an extremely simple contract, the greater ergonomics of the Sigil version are readily apparent. The Sigil contract reads like normal Rust: you update fields on a struct and return typed values. There’s no manual packing/unpacking, no global keyspace to maintain, and far fewer opportunities to drift between the contract and its clients. Alkanes requires developers to invent and document an opcode table, hand-roll a storage key convention (e.g., `"/counter"`), and write custom (de)serialization for arguments and return values.

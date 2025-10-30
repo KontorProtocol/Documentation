@@ -1,0 +1,18 @@
+---
+title: Architecture and Consensus
+mode: wide
+---
+
+<div className="page-intro">
+Deterministic execution of Bitcoin transactions maintains protocol state without any trusted entities.
+</div>
+
+As a metaprotocol on Bitcoin, Kontor uses "**embedded consensus**": metaprotocols derive state from an underlying blockchain without implementing their own consensus mechanism. Bitcoin miners order transactions and secure them with proof-of-work; Kontor indexers process those transactions according to additional rules. Because Bitcoin provides an immutable, timestamped log of all Kontor operations, and because Kontor's execution rules are deterministic, every indexer processing the same Bitcoin history arrives at the same state. There is no voting, no leader election, no validator set—only deterministic computation over a shared input stream, called state-machine replication.
+
+## Indexer Architecture
+
+Each Kontor indexer connects to Bitcoin via RPC and ZeroMQ, receiving blocks as they are mined and handling reorganizations when they occur. The fetcher/follower module monitors Bitcoin's chain and feeds block data to the reactor, which serves as the central coordinator. When the reactor receives a block, it scans for Kontor transactions, identifies their type (contract deployment, contract call, file agreement, storage proof), and routes them to the appropriate handler. Smart contract calls are directed to the contract runner, which loads the WebAssembly bytecode, executes the function in a sandboxed runtime, and writes state changes to the database. File-related operations are handled by the storage module, which manages metadata and proofs on-chain while coordinating with peer storage nodes for actual data distribution.
+
+The indexer uses a single-threaded event loop to maintain consistency. All state modifications flow through one reactor thread with exclusive control of database writes. This eliminates concurrency issues—two contract executions cannot write conflicting state because all execution is sequential. Auxiliary processes such as the API server and storage synchronization run in separate threads but communicate with the reactor through message passing. When a client queries contract state via the HTTP API, the request is handled by the async response server, which sends a message to the reactor. The reactor reads from the database and returns the result.
+
+Contract state is stored in a path-based hierarchy in SQLite. When a contract modifies storage, the indexer does not overwrite existing values; instead, it creates a new row indexed by block height. This append-only structure simplifies the handling of blockchain reorganizations—if Bitcoin reorgs, the indexer deletes rows above the reorg height and reprocesses from that point. The state database serves as the canonical source of truth; the blockchain contains only the operations that produced it.

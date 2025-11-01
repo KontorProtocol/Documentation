@@ -2,6 +2,7 @@
 canonicalized
 accessors
 Numerics
+precompile
 mispriced
 IDE
 cellpacks
@@ -9,6 +10,7 @@ keyspace
 TypeScript
 ORM
 functionality
+gasless
 SDK
 DSL
 incentivize
@@ -59,6 +61,7 @@ Sigil
 # Bitcoin & Blockchain Terms
 Bitcoin
 BTC
+Multisig
 reentrancy
 keypaths
 PSBT
@@ -104,7 +107,6 @@ validators
 sandboxed
 AMM
 AMMs
-NFTs
 
 # Bitcoin Protocols
 Ordinals
@@ -118,6 +120,10 @@ Sia
 Metashrew
 Chia
 Chia's
+EVM's
+Uniswap
+AAVE
+NFTs
 
 # Technical Terms
 cross-contract

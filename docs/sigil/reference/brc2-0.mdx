@@ -1,0 +1,21 @@
+---
+sidebar_position: 6
+title: Kontor vs. BRC2.0
+---
+
+Both BRC2.0 and Kontor both aim to bring programmability to Bitcoin with metaprotocol-based smart contract execution. Unlike Kontor, however, BRC-2.0:
+
+1. Uses a port of the EVM for its contract runtime
+2. Does not have a native gas currency
+
+BRC2.0's choice of using the EVM execution environment aims to leverage Ethereum's large developer ecosystem and smart contract libraries. However, the constraints of running EVM on Bitcoin create significant compatibility limitations. The core issue is address translation: BRC2.0 maps Bitcoin addresses to EVM addresses via `keccak256(bitcoin_pkscript).slice(-40)`, which creates addresses that have no corresponding private keys. These addresses look like standard Ethereum addresses but cannot produce signatures verifiable by `ecrecover`. This affects:
+
+- Multisig wallets and contract-based accounts
+- Meta-transactions and gasless transaction patterns
+- EIP-712 typed signatures (used throughout DeFi)
+- Account abstraction schemes (ERC-4337)
+- Standard `permit()` functions on tokens
+
+BRC2.0 provides a BIP-322 signature verification precompile at address `0xfe`, but this requires rewriting any contract that performs signature verification. Existing Ethereum contracts, including widely-used protocols like Uniswap, Aave, and Safe, therefore need substantial modification to work in BRC2.0. The pattern of using `ecrecover` to verify signatures must be replaced with calls to the custom precompile. This means the benefit of leveraging existing Ethereum codebases is largely unrealized. Wallet integration also requires different infrastructure. Users cannot use MetaMask or standard Web3 wallets; they need Bitcoin wallets supporting BIP-322 signing, but this standard has very limited support.
+
+Beyond the compatibility issues, the EVM and Solidity have well-documented limitations that have driven the broader smart contract ecosystem toward WebAssembly over recent years. The EVM's design has been implicated in numerous high-profile exploits—reentrancy attacks, integer overflows, and complex gas optimization challenges. Solidity's implicit behaviors and limited type system make it difficult to write provably correct contracts. Kontor's Sigil framework has better security properties, more predictable execution costs, and access to mature programming language ecosystems.

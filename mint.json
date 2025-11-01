@@ -18,6 +18,10 @@
   "topbarLinks": [],
   "tabs": [
     {
+      "name": "Home",
+      "url": "docs/home"
+    },
+    {
       "name": "Kontor Protocol",
       "url": "docs/kontor"
     },
@@ -32,6 +36,12 @@
   ],
   "anchors": [],
   "navigation": [
+    {
+      "group": "Home",
+      "pages": [
+        "docs/home"
+      ]
+    },
     {
       "group": "Introduction",
       "pages": [

@@ -22,7 +22,11 @@ Sigil’s core idea—*first-class, typed contract methods*—makes contracts re
 
 ## Storage
 
-Alkanes’ **string-keyed key-value storage** pushes a lot of design burden onto developers: you invent your own keyspace, document it, and keep it consistent across versions and tooling. A ledger becomes `"/balance/{addr}"`; a cap becomes `"/cap"`, etc. This is fine for small demos, but entropy accumulates in real projects, especially those with multiple authors.
+Alkanes' **string-keyed key-value storage** pushes a lot of design burden onto developers: you invent your own keyspace, document it, and keep it consistent across versions and tooling. A ledger becomes `"/balance/{addr}"`; a cap becomes `"/cap"`, etc. This is fine for small demos, but entropy accumulates in real projects, especially those with multiple authors.
+
+Sigil's storage model uses **typed, structured storage with derive macros** (`StorageRoot`, `Storage`) that generate ORM-like interfaces at compile time. Instead of manually constructing string keys and calling generic `get_value::<T>()` / `set_value::<T>()` functions, you declare Rust structs and the framework generates type-safe accessor methods. For example, a `TokenStorage` struct with a `ledger: Map<String, Integer>` field automatically gets `storage(ctx).ledger().get(ctx, key)` and `storage(ctx).ledger().set(ctx, key, value)` methods—no string keys to type, no risk of typos or collisions, and full IDE autocomplete support.
+
+This approach provides several advantages: **compile-time type checking** catches storage access errors before deployment; **nested field access** (e.g., `account.balance(ctx)`) reads specific fields without deserializing entire structures; and **refactoring safety**—renaming a field updates all access points automatically. The framework also generates storage "wrappers" for nested structs, allowing you to read or update sub-fields in complex data structures without manual keyspace management. In Alkanes, equivalent functionality requires careful string interpolation, manual (de)serialization, and vigilant documentation to avoid conflicts between similarly-named keys.
 
 ## Safety
 

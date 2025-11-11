@@ -22,20 +22,20 @@
       "url": "docs/introduction"
     },
     {
-      "name": "Kontor Protocol",
-      "url": "docs/kontor"
-    },
-    {
       "name": "Smart Contracts",
       "url": "docs/sigil"
+    },
+    {
+      "name": "File Storage",
+      "url": "docs/storage"
     },
     {
       "name": "Economics",
       "url": "docs/economics"
     },
     {
-      "name": "Storage",
-      "url": "docs/storage"
+      "name": "Resources",
+      "url": "docs/resources"
     }
   ],
   "anchors": [],
@@ -47,22 +47,9 @@
         "docs/introduction/what-is-kontor",
         "docs/introduction/why-kontor",
         "docs/introduction/how-it-works",
-        "docs/introduction/core-concepts"
-      ]
-    },
-    {
-      "group": "Core Concepts",
-      "pages": [
-        "docs/kontor/architecture",
-        "docs/kontor/security"
-      ]
-    },
-    {
-      "group": "Resources",
-      "pages": [
-        "docs/kontor/faq",
-        "docs/kontor/resources/whitepaper",
-        "docs/kontor/resources/economic-model"
+        "docs/introduction/core-concepts",
+        "docs/introduction/architecture",
+        "docs/introduction/security"
       ]
     },
     {
@@ -100,7 +87,7 @@
       "group": "Economics",
       "pages": [
         "docs/economics/introduction",
-        "docs/kontor/resources/economic-model",
+        "docs/resources/economic-model",
         "docs/economics/perpetual",
         "docs/economics/node-economics",
         "docs/economics/network-health",
@@ -109,16 +96,25 @@
       ]
     },
     {
-      "group": "Storage",
+      "group": "File Storage",
       "pages": [
         "docs/storage/introduction",
-        "docs/storage/resources/storage-protocol",
+        "docs/resources/storage-protocol",
         "docs/storage/file-agreements",
         "docs/storage/challenge-response",
         "docs/storage/node-operations",
         "docs/storage/cryptographic-system",
         "docs/storage/sponsorship-markets",
         "docs/storage/storage-security"
+      ]
+    },
+    {
+      "group": "Resources",
+      "pages": [
+        "docs/resources/faq",
+        "docs/resources/whitepaper",
+        "docs/resources/economic-model",
+        "docs/resources/storage-protocol"
       ]
     }
   ],

@@ -1,0 +1,89 @@
+---
+sidebar_position: 5
+title: Sponsorship Markets
+---
+
+The sponsorship mechanism solves a fundamental bootstrapping problem: how do new nodes obtain file data when they don't already have it? Nodes cannot join file agreements without possessing the data (they'd fail challenges immediately), but existing storers could gatekeep by refusing to share. The sponsorship market breaks this deadlock by making it profitable for existing storers to provide data to newcomers.
+
+## The Data Distribution Problem
+
+When a file agreement is created, the user distributes file data off-chain to potential storage nodes. Wide initial distribution benefits the user—faster activation, competitive retrieval markets, lower future sponsorship costs. But after activation, the protocol faces a coordination problem: what incentivizes existing storers to share data with nodes that want to join later?
+
+Without sponsorship, existing storers could form cartels and refuse to share data, creating a permanent monopoly. Any node wanting to join would be blocked. The file would remain at minimum replication forever, concentrated among the original participants who could extract monopoly rents for retrieval services. This violates the protocol's openness—new nodes should be able to enter freely based on economic incentives, not permission from incumbents.
+
+The sponsorship mechanism solves this by creating a market for data provision. Existing storers can offer to provide file data in exchange for time-limited commission on the entrant's future rewards. This transforms data sharing from altruism to profit opportunity—sponsors earn revenue for helping new nodes join. The market structure ensures any existing storer can offer sponsorship, creating competition that prevents gatekeeping cartels.
+
+## Trustless Bond-Escrow Mechanism
+
+The sponsorship process must be trustless—neither party should be able to exploit the other. The protocol achieves this through a two-step on-chain commitment with bond escrow:
+
+**Step 1: Sponsor posts offer.** The sponsor (an existing storer) broadcasts a `Create-Sponsorship-Offer` transaction to Bitcoin specifying:
+- Target entrant (specific node identifier)
+- Commission rate ($\gamma_{\text{rate}}$) and duration ($\gamma_{\text{duration}}$ in blocks)
+- Required bond amount ($\beta_{\text{bond}}$ in KOR)
+- Expiration deadline ($W_{\text{offer}}$ blocks, typically ~1 day)
+
+This on-chain commitment fixes the terms before any off-chain data transfer. The sponsor cannot modify terms after posting—the entrant sees exactly what they're accepting. The Bitcoin transaction fee paid to post the offer creates a credible commitment.
+
+**Step 2: Entrant accepts.** After receiving the offer on-chain, the sponsor transfers file data to the entrant off-chain (through direct peer-to-peer transfer or other means). The entrant independently verifies the data matches the on-chain Merkle root by running the file preparation algorithm. If verification succeeds, the entrant broadcasts a `Join-Agreement` transaction accepting the offer. This transaction atomically:
+- Locks the bond ($\beta_{\text{bond}}$) in escrow from entrant's spendable balance
+- Creates the sponsorship agreement with the offer's terms
+- Adds the entrant to the file agreement
+- Removes the accepted offer from state
+
+The bond remains in escrow until the entrant's first challenge for this file is resolved.
+
+**Bond resolution.** When the entrant is first challenged for the sponsored file:
+- **Success:** If the entrant submits a valid proof, the bond is returned to the entrant's balance and the sponsorship continues normally for its full duration
+- **Failure:** If the entrant fails the challenge, the bond is transferred to the sponsor (compensating fees and bandwidth costs), the sponsorship is voided retroactively (no commission ever paid), and the entrant is slashed and removed normally
+
+This mechanism makes sponsorship fully trustless:
+- The sponsor cannot extort—terms are fixed on-chain before data transfer
+- The entrant cannot grief—the bond at risk equals the sponsor's costs
+- Both parties have symmetric incentives to perform honestly
+
+## Market Dynamics and Equilibrium
+
+The sponsorship market operates through competition. Multiple sponsors can post offers for the same entrant (or different entrants) with varying commission rates and durations. Entrants select the most favorable terms, and sponsors compete by offering lower rates.
+
+**Equilibrium commission rate.** The equilibrium rate $\gamma_{\text{eq}}$ balances the sponsor's costs against the net present value of commission payments. The sponsor incurs:
+- Bitcoin transaction fees for posting the offer ($c_{\text{BTC}}^{\text{offer}}$)
+- Bandwidth costs for transferring the file ($c_{\text{transfer}}^{\text{USD}}$)
+
+The sponsor receives commission payments $\gamma_{\text{rate}} \cdot \varepsilon_f / |N_f|$ each block for $\gamma_{\text{duration}}$ blocks, where $\varepsilon_f$ is the file's emissions and $|N_f|$ is the node count after the entrant joins. The NPV of this stream depends on the sponsor's discount rate $\rho$.
+
+For sponsorship to be profitable, the NPV of commissions must exceed costs. The equilibrium rate emerges where marginal sponsors break even:
+
+$ \gamma_{\text{eq}} \approx \frac{(c_{\text{BTC}}^{\text{offer}} \cdot \xi_{\text{BTC/USD}} + c_{\text{transfer}}^{\text{USD}}) \cdot \rho \cdot (|N_f|+1)}{\varepsilon_f \cdot \xi_{\text{KOR/USD}} \cdot (1 - (1 + \rho)^{-\gamma_{\text{duration}}})} $
+
+where $\xi$ represents exchange rates. With typical parameters (moderate file emissions, reasonable duration, standard bandwidth costs), equilibrium rates are low—typically single-digit percentages. This makes sponsorship attractive to entrants while profitable for sponsors.
+
+**Competitive pressure.** Even if a cartel of storers attempts to monopolize a file by coordinating high commission rates, any single member has incentive to defect and undercut the cartel price, capturing the entire commission for themselves. The protocol doesn't mandate sponsorship—nodes can join directly if they obtain data through other means—but it provides a permissionless fallback that ensures no file can be permanently locked to a closed group.
+
+**Duration selection.** Longer durations provide sponsors more total commission but increase the entrant's cost. Shorter durations reduce entrant cost but may not justify sponsor's upfront investment. Market competition pushes durations toward values that balance these tradeoffs—typically measured in weeks to months, long enough to recover sponsor costs but short enough to remain attractive to entrants.
+
+## Attack Resistance
+
+The bond-escrow mechanism prevents several potential attacks:
+
+**Sponsor extortion.** A sponsor posts an offer, the entrant expresses interest off-chain, and the sponsor demands a higher commission before transferring data. This fails because commission rate is committed on-chain before any off-chain interaction. The entrant sees the final terms in protocol state and can accept, reject, or seek competing offers. The sponsor cannot renegotiate.
+
+**Entrant griefing.** A malicious actor creates a Sybil node, accepts a sponsorship offer, receives file data, then intentionally fails the first challenge to impose costs on the sponsor. Without the bond, this would cost the sponsor transaction fees and bandwidth (~$0.60) while the attacker loses slashed stake (~$200). The attack isn't profitable but enables disproportionate cost imposition.
+
+The bond requirement ($\beta_{\text{bond}} \approx 3$ KOR ≈ $0.60 typical) eliminates this: if the entrant fails, the bond transfers to the sponsor, fully compensating their costs. The attacker loses both the bond and the slashed stake (~$200.60 total) while the sponsor loses nothing. The griefing attack becomes strictly unprofitable.
+
+**Front-running.** An adversary observes an acceptance transaction in the mempool and attempts to accept the same offer first by submitting a competing transaction with higher fees. This fails because each offer specifies a target entrant identifier. The `Join-Agreement` procedure validates `signer == offer.entrant`, rejecting acceptance attempts from any node other than the designated target. The targeted offer design makes front-running impossible.
+
+**Sponsor ghosting.** A sponsor posts an offer but never transfers the data off-chain. The entrant waits but receives nothing. The sponsor loses Bitcoin transaction fees (wasted expenditure) and gains nothing. The entrant loses opportunity cost of waiting (bounded by $W_{\text{offer}}$ ≈ 1 day). This attack is economically irrational—the sponsor incurs costs for no benefit. Entrants can mitigate by soliciting multiple parallel offers from different sponsors.
+
+## Market Benefits
+
+The sponsorship market provides several systemic benefits beyond just solving the data distribution problem:
+
+**Permissionless entry.** New nodes can always join file agreements based purely on economic incentives, never requiring permission from existing participants. This maintains the protocol's openness as files age and original participants turn over.
+
+**Competitive pricing.** Multiple potential sponsors create competitive markets for data provision. Commission rates reflect actual costs rather than monopoly prices, benefiting entrants and ensuring efficient node entry.
+
+**Dynamic repair.** When files become under-replicated (through slashing or other events), per-node rewards increase, making sponsorship more valuable. Sponsors have stronger incentive to recruit new nodes when files need repair most, creating automatic rebalancing.
+
+The sponsorship mechanism exemplifies the protocol's design philosophy: rather than mandating behavior or requiring coordination, create economic incentives that make desirable behavior individually profitable. The result is a self-organizing market that maintains protocol openness without central enforcement.

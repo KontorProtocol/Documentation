@@ -1,0 +1,46 @@
+---
+sidebar_position: 0
+title: Introduction
+---
+
+Bitcoin was designed as a state machine for decentralized agreement on payments, not for storing large quantities of data. While the protocol offers miners strong economic incentives for honest behavior, it provides no direct incentives for non-miners to run full nodes—and certainly none for storing provably prunable data like witness signatures or arbitrary payloads. Embedding file data directly in Bitcoin transactions externalizes costs to the entire network: a file stored on-chain must be downloaded and validated by every full node forever, creating a persistent burden that the uploader pays for once but the network bears indefinitely. This makes direct on-chain storage both economically prohibitive and contentious within the Bitcoin community.
+
+Yet blockchain applications need data with strong availability guarantees. NFTs need to reference images. DeFi protocols need state snapshots and oracle data. Assets need metadata. Kontor squares the circle: it provides Bitcoin users with scalable, permanent, off-chain file storage where the data storage *system* itself is entirely on-chain. The file contents live off-chain with storage nodes who are economically incentivized to maintain them forever. The blockchain records only the cryptographic commitments and periodic proofs of possession—the stateful components that require consensus. This architecture makes large-scale data storage economically practical while providing Byzantine fault-tolerant availability guarantees that are as strong as those of on-chain storage.
+
+## Pay Once, Store Forever
+
+Traditional cloud storage operates on subscription models: stop paying, lose your data. This is fundamentally incompatible with blockchain use cases where assets might sit dormant for years. A one-time payment cannot fund perpetual service—even a large upfront fee will eventually be depleted. Storage nodes incur continuous costs for equipment, bandwidth, power, and facilities that must be met indefinitely.
+
+Kontor solves this through perpetual emissions. Storage nodes earn KOR each block proportional to the files they store, creating an ongoing revenue stream that lasts as long as the protocol exists. The user's one-time fee is burned rather than escrowed—it serves to prevent spam and create deflationary pressure, but it does not directly fund the storage. The actual funding comes from inflation, calibrated so that the net present value of future emissions exceeds storage costs for rational operators, making it profitable to maintain files indefinitely.
+
+This emission-based model enables responsive incentives that fixed payments cannot provide. If replication falls below safe levels, emissions increase automatically, making storage more profitable and attracting additional capacity. The system self-regulates without requiring governance decisions or manual parameter updates. Files created earlier in the network's history receive higher emission weights permanently, ensuring that valuable historical data remains attractive to store as the network grows, and the protocol handles files from kilobytes to gigabytes with logarithmic cost scaling—a 1 GB file costs only about twice as much to store as a 1 MB file, ensuring that storage nodes find both small but critical files and large archival data equally attractive to maintain.
+
+## The Verification Problem
+
+The fundamental challenge is verifying that storage nodes actually possess the data they claim to store. Without verification, rational nodes would delete data immediately and pocket rewards until caught. The protocol solves this through a challenge-response mechanism built on compact proofs of retrievability.
+
+Each Bitcoin block, the protocol uses the block hash as a randomness source to deterministically select files for auditing and nodes to challenge. The challenged node must prove cryptographically that it possesses specific randomly-chosen sectors of the file. The proof is compact (around 10 kB regardless of file size), verifiable by anyone, and impossible to forge. If the node produces a valid proof within approximately two weeks, it continues earning rewards. If it fails or cannot respond, it is slashed and removed from the agreement.
+
+The detection probability is calibrated to make deletion economically irrational. A node that has lost even 10% of a file's data has a 99.997% chance of being caught per challenge. With 12 challenges per year, expected time to detection is measured in weeks, not years. The capital at risk—the node's stake, which typically exceeds storage costs by orders of magnitude—makes the gamble unattractive. The protocol doesn't need to challenge every byte constantly; it only needs to make the expected cost of deletion far exceed any possible savings.
+
+## Comparison with Alternatives
+
+Several projects have attempted to solve blockchain data storage, but each has fundamental limitations that Kontor addresses.
+
+**Filecoin, Sia, and Chia** are designed to compete with centralized cloud storage services like Amazon S3 rather than provide blockchain-native solutions. They optimize for bulk data at competitive pricing but offer no long-term availability guarantees. Storage deals must be continuously renewed—the uploading user must keep paying or the data disappears. This makes them unsuitable for blockchain applications where the data must outlive the original uploader.
+
+**Arweave** has goals similar to Kontor's but its design is incomplete. Most critically, Arweave's economic model does not actually incentivize perpetual storage—it relies on an "endowment pool" that developers hope will be sufficient, and the Yellow Paper explicitly does not claim the network will continue producing blocks in perpetuity. Storage nodes face no penalties for failing to store committed data. And because Arweave is a separate blockchain, Bitcoin users must purchase additional cryptocurrency off-chain with incompatible tooling.
+
+**IPFS** is commonly used for file distribution and retrieval but provides no availability guarantees whatsoever. Without an integrated cryptocurrency, there's no mechanism for incentivizing nodes to host data. Files disappear when nodes decide to prune them, making IPFS unreliable for critical applications without additional infrastructure.
+
+Kontor provides what these systems cannot: pay once and store forever, strong Byzantine fault-tolerant availability guarantees, direct integration with Bitcoin requiring no separate tokens or bridges, and economic penalties that make rational nodes prefer honest storage over any alternative strategy.
+
+## Technical Design
+
+The protocol uses Nova recursive SNARKs to create efficient, constant-size proofs regardless of file size. This cryptographic construction enables storage nodes to aggregate multiple challenges across multiple files into a single ~10 kB proof. Without this aggregation, proving costs would scale linearly with stored files, making large-scale operations uneconomical. With aggregation, a node storing thousands of files can batch weeks of challenges into a single Bitcoin transaction, amortizing the transaction fee across the entire proof set.
+
+File preparation applies Reed-Solomon erasure coding (10% redundancy) and builds a Merkle tree commitment over 31-byte symbols. The erasure coding ensures files remain reconstructible even when nodes have lost data below the detection threshold. The Merkle tree enables efficient challenges: nodes prove possession of randomly-selected sectors without revealing the entire file. The proof system uses Poseidon hashing optimized for arithmetic circuits, providing orders of magnitude better performance than SHA-256 for in-circuit operations.
+
+The economic layer—emissions, slashing, dynamic stake requirements—ensures that rational operators naturally behave honestly. Capital costs (opportunity cost of staked KOR) dominate operational costs by design, making attacks that save storage costs while maintaining rewards fundamentally unprofitable. Security emerges from aligned incentives rather than imposed restrictions.
+
+For the complete technical specification including cryptographic primitives, protocol parameters, and formal security analysis, see the [Storage Protocol Specification](/docs/storage/resources/storage-protocol).

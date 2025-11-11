@@ -1,0 +1,93 @@
+---
+sidebar_position: 4
+title: Cryptographic System
+---
+
+The storage protocol's cryptographic foundation enables compact, constant-size proofs that scale from single files to thousands of aggregated challenges. The system combines Merkle trees for cryptographic commitments, Reed-Solomon codes for fault tolerance, and Nova recursive SNARKs for efficient proof compression. These components work together to make verification economically practical at scale.
+
+## Merkle Trees and Commitments
+
+Each file is committed through a binary Merkle tree built over its encoded symbols using Poseidon hashing. The tree's root serves as a compact cryptographic commitment—a single 32-byte value that binds to the entire file contents with collision resistance.
+
+**Symbol-to-leaf encoding.** Each 31-byte symbol encodes directly as a Pallas field element through little-endian byte representation with no intermediate hashing. This direct encoding is critical for proof-of-retrievability: to prove possession of a challenged symbol, a node must possess the actual 31 bytes, encode them as a field element, and provide the Merkle path. An attacker storing only the Merkle tree (field elements) without underlying bytes cannot answer challenges—the SNARK circuit verification requires demonstrating knowledge of the bytes that encode to each challenged leaf.
+
+**Poseidon hashing.** The protocol uses Poseidon for all in-circuit hashing because it's optimized for arithmetic circuits over prime fields. Poseidon requires hundreds of constraints per invocation versus thousands for SHA-256 or Blake2, reducing IVC proving cost by orders of magnitude. The hash function operates over the Pallas and Vesta curve cycle (254-bit prime fields), providing approximately 128 bits of security under current best-known attacks.
+
+**Tree structure.** The tree is binary—two children per node. Higher-arity trees (quaternary, octal) would reduce depth but increase proof size (more siblings per level) and circuit complexity (multiple hash inputs per verification step). When a tree level has odd node count, the final node is duplicated (hashed with itself) to maintain uniform circuit structure. Domain separation tags prevent cross-layer collision attacks: leaf encoding uses one tag, internal node hashing uses another.
+
+**Merkle proofs.** A proof for leaf index $i$ consists of the sibling hashes along the path from leaf to root plus direction bits indicating whether the node is a left or right child at each level. For tree depth $d$, the proof size is $d$ field elements (around 32 bytes each). The verifier recomputes the path: starting from the leaf, hash with the sibling according to the direction bit, producing the parent; repeat until reaching the root. If the computed root matches the public commitment, the proof is valid.
+
+## Nova Incremental Verification
+
+The protocol uses Nova, a recursive SNARK system that enables incrementally verifiable computation. Nova allows a prover to demonstrate correct execution of a computation over many steps while producing a proof that remains constant in size regardless of step count. This property is what makes multi-challenge aggregation practical.
+
+**Folding scheme.** Nova works through "folding"—a technique where each step's proof gets folded into the previous proof, accumulating evidence of correct execution without growing the proof structure. The prover maintains a running witness (the IVC accumulator) that tracks all previous steps. Each new step verifies the previous accumulator, executes the step circuit, and produces a new accumulator. The accumulator grows logarithmically with step count but compresses to constant size through Spartan at the end.
+
+**Proof-of-retrievability circuit.** The step circuit $\phi_{\text{PoR}}$ verifies possession of one challenged symbol. The public inputs are the file root $\rho$, a state accumulator $s$, the challenge seed $\sigma$, and tree depth $d$. The private witness includes the challenged leaf, its Merkle path siblings, and direction bits. The circuit:
+
+1. Derives the challenge index deterministically from the seed and current state
+2. Verifies the Merkle path from the challenged leaf to the root
+3. Updates the state accumulator by hashing it with the verified leaf
+4. Outputs the updated state for the next iteration
+
+This circuit executes once per challenged symbol. For a challenge requiring 100 symbol proofs, the circuit executes 100 times, each time folding the proof into the accumulator. The deterministic index derivation ensures verifiers compute the same challenge indices; the Merkle verification proves possession; the state accumulation prevents replay attacks.
+
+**Spartan compression.** After all IVC folding steps complete, the accumulator is compressed using Spartan—a transparent SNARK that converts the logarithmic-size accumulator into a constant-size proof (around 10 kB). Spartan verification takes $O(\log^2 s)$ time where $s$ is step count, approximately 50 milliseconds for typical challenges. The compressed proof is what gets published to Bitcoin.
+
+**Transparent setup.** Unlike SNARKs such as Groth16 or PLONK, Nova and Spartan require no trusted setup ceremony. The public parameters can be generated deterministically by anyone from the circuit structure without relying on secret randomness that must be destroyed. This eliminates trusted setup risks and improves decentralization—any party can independently generate or verify the parameters for a given circuit shape.
+
+## Multi-File Proof Aggregation
+
+Storage nodes frequently face challenges on multiple files within the proof window. Aggregating these challenges into a single proof dramatically reduces Bitcoin transaction costs. The File Ledger enables this aggregation while maintaining security.
+
+**File Ledger construction.** The File Ledger is a Merkle tree built over the root commitments of all active files. For each file $f$ with root $\rho_f$ and depth $d_f$, the protocol computes a root commitment:
+
+$ \text{rc}_f = H_{\text{Poseidon}}(\text{TAG}_{\text{rc}}, \rho_f, d_f) $
+
+This binds the file's root and depth together, preventing depth-spoofing attacks where an adversary might try to reuse proofs across files with different tree structures. Files are ordered deterministically (lexicographically by file identifier), and the ledger is constructed from these root commitments:
+
+$ L = \text{Merkle-Tree}([\text{rc}_1, \text{rc}_2, ..., \text{rc}_{|F|}]) $
+
+Each file has a canonical ledger index corresponding to its position in sorted order. The ledger root $\rho_L$ commits to all files in the system at a specific block height.
+
+**Aggregated proof structure.** When a node is challenged on $k$ files, it generates a single proof demonstrating possession of challenged symbols across all files. The proof includes:
+- For each file: Merkle path from its root commitment to the ledger root (size $O(\log |F|)$)
+- For each challenged symbol in each file: Merkle path from symbol to file root (size $O(\log n_{\text{total}})$)
+- Nova IVC accumulator tracking all verifications across all files
+- Compressed Spartan SNARK proving correct execution
+
+The uncompressed witness size is $O(k \cdot \log |F| + k \cdot s_{\text{chal}} \cdot \log n_{\text{total}})$ where $k$ is challenged files, $s_{\text{chal}}$ is symbols per file, and $n_{\text{total}}$ is typical file size. After Spartan compression, this reduces to constant ~10 kB regardless of $k$ or $s_{\text{chal}}$.
+
+**Public inputs for multi-file proofs.** Single-file proofs use public inputs $[ρ, s_0, σ, d]$. Multi-file proofs extend this to:
+
+$ z_0 = [\rho_L, s_0, I_{\text{ledger}}, D, \Sigma, Z_{\text{out}}] $
+
+where $\rho_L$ is the ledger root, $I_{\text{ledger}}$ contains ledger indices for each challenged file, $D$ contains tree depths, $\Sigma$ contains challenge seeds, and $Z_{\text{out}}$ contains final states after processing all symbols. The circuit verifies each file's root commitment is at its claimed ledger index, then proceeds to verify symbol Merkle paths using per-file parameters.
+
+**Ledger state binding.** Proofs are cryptographically bound to a specific ledger state through the ledger root in public inputs. This root must correspond to the ledger at challenge block height, not the current state. The binding prevents ledger substitution (proving against a different file set), index manipulation (claiming files are at different positions), and state confusion (using historical proofs against current challenges).
+
+## Verification Process
+
+When indexers receive a proof transaction, they extract the proof structure and challenge identifiers, reconstruct public inputs from challenge parameters, and verify the Spartan SNARK. Verification checks:
+
+1. **Proof timeliness:** Submitted before challenge expiration
+2. **Public input consistency:** Matches expected challenge parameters (correct roots, seeds, depths)
+3. **SNARK verification:** Spartan verification passes (proving correct circuit execution)
+4. **Challenge binding:** Proof covers the exact challenges claimed (ordering matches, no substitution)
+
+The constant-time verification (~50 milliseconds) allows indexers to verify thousands of proofs efficiently while maintaining deterministic consensus. If verification succeeds, challenges are marked satisfied; if it fails or the proof is absent at expiration, the node is slashed.
+
+## Security Properties
+
+The proof system provides several security guarantees critical to the storage protocol:
+
+**Soundness (unforgeability).** A computationally bounded adversary who doesn't possess challenged data cannot generate valid proofs except with negligible probability. Breaking soundness requires either defeating the Nova/Spartan SNARK (computationally infeasible under discrete log assumption) or finding Poseidon collisions (computationally infeasible for 128-bit security). The multi-layered cryptographic construction ensures breaking any single component is insufficient.
+
+**Completeness (honest prover success).** An honest prover possessing complete file data can always generate valid proofs that pass verification, provided cryptographic primitives function as specified. This guarantee holds deterministically—honest provers don't fail due to probabilistic factors.
+
+**Public verifiability.** Proofs can be verified by any party possessing only the public parameters, Merkle root commitments, and challenge parameters. Verifiers need not possess file data, trust the prover, or interact beyond receiving the proof. This enables the deterministic verification that makes metaprotocol consensus possible.
+
+**Transparent security.** The transparent setup eliminates trusted ceremonies and associated risks. Anyone can independently generate public parameters and verify they match the protocol specification. There's no "toxic waste" that could compromise security if not properly destroyed, and no multi-party computation ceremonies that could fail or be subverted.
+
+The combination of these properties—cryptographic unforgeability, efficient verification, and transparent security—is what makes trustless storage verification possible at the scale required for a perpetual storage network.
+

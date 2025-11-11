@@ -1,0 +1,66 @@
+---
+sidebar_position: 6
+title: Storage Security
+---
+
+The storage protocol's security operates on two layers: cryptographic security ensures only nodes with actual data can produce valid proofs, while economic security ensures rational nodes prefer honest storage over any alternative strategy. Understanding how these layers interact is essential to understanding why the protocol provides strong perpetual availability guarantees.
+
+## Cryptographic Foundation
+
+The proof system's security relies on standard cryptographic hardness assumptions. Breaking the system requires defeating multiple independent cryptographic primitives simultaneously.
+
+**Proof unforgeability.** A computationally bounded adversary who doesn't possess challenged data cannot generate valid proofs except with negligible probability. Forging a proof requires breaking Nova/Spartan soundness (computationally infeasible under discrete logarithm assumption on Pallas/Vesta curves, ~128-bit security), finding Poseidon hash collisions (computationally infeasible for 128-bit security target), or breaking Merkle tree binding (follows from collision resistance). The multi-layered construction ensures breaking any single component is insufficient.
+
+**Challenge unpredictability.** Challenges derive from Bitcoin block hashes, which provide high-entropy unpredictable randomness. Miners could theoretically grind block hashes to bias challenge selection, but this is economically irrational—the cost of discarding a valid block vastly exceeds any benefit from influencing which storage nodes are challenged. The protocol uses the block hash directly because the economic disincentive against grinding is overwhelming.
+
+**Replay prevention.** Each challenge has a unique deterministic identifier computed via domain-separated hashing. Challenge identifiers prevent proof reuse across different challenges, files, or nodes. The state accumulation in the PoR circuit prevents partial replay—each proof is cryptographically bound to a specific sequence of challenged sectors in a specific order.
+
+**Transparent setup.** The proof system requires no trusted ceremony. Anyone can independently generate public parameters from circuit structure and verify they match the protocol specification, eliminating the trust assumptions and coordination risks of trusted setup ceremonies.
+
+## Detection Economics
+
+The challenge mechanism provides probabilistic guarantees calibrated to make selective storage economically irrational. The key insight is that the protocol doesn't need perfect detection—it only needs to make the expected cost of cheating far exceed any possible savings.
+
+**Detection probability.** For a node that has lost fraction $\mu$ of its data, detection probability per challenge is approximately $1 - (1-\mu)^{100}$. With 12 challenges per year, even 10% data loss yields 99.997% per-challenge detection with expected time to detection around 3 days. The capital at risk (staked KOR) typically exceeds storage costs by factors of 10-100×, making the risk-reward calculation decisively unfavorable.
+
+**Erasure coding safety margin.** The 10% detection threshold aligns with Reed-Solomon fault tolerance. Each codeword can reconstruct from any 231 of 255 symbols (90%). The detection probability is calibrated to catch nodes at or above this threshold—ensuring files passing challenges remain reconstructible. The protocol needs only to prevent nodes from crossing the recovery threshold.
+
+**Economic security emerges from detection.** High detection probability is what enables economic security. Without reliable detection, nodes could safely store nothing and gamble on not being checked. With near-certain detection within days, storing less than the full file becomes a losing bet. This detection probability, combined with capital cost dominance (stake opportunity costs dwarf storage costs), is what makes honest storage the dominant strategy for rational operators.
+
+For comprehensive analysis of how detection economics prevent specific attacks, see [Economic Security](/docs/economics/economic-security).
+
+## Protocol Mechanisms
+
+Several protocol mechanisms enforce correct operation and prevent manipulation:
+
+**Dynamic staking.** The dynamic stake factor $\lambda_{\text{stake}}(n) = 1 + \lambda_{\text{slash}} / \ln(2 + |F_n|)$ creates capital efficiency for large consolidated operations while making Sybil fragmentation prohibitively expensive. For detailed analysis of Sybil resistance, see [Economic Security: Sybil Resistance via Dynamic Staking](/docs/economics/economic-security#sybil-resistance-via-dynamic-staking).
+
+**Leave mechanism.** The quadratic leave fee $\varphi_{\text{leave}} = k_f \cdot (n_{\text{min}} / |N_f|)^2$ prevents cascading exits when files approach minimum replication, creating hysteresis that stabilizes the network during stress. Combined with programmatic prohibition of voluntary departure at minimum replication, this ensures files never drop below thresholds through coordinated action.
+
+**Stake insufficiency handling.** Automatic restoration when stake becomes insufficient prevents strategic gaming—the protocol ensures maximum penalty extraction through graceful removal from non-critical agreements or, if necessary, total forfeiture.
+
+**Sponsorship bond mechanism.** The bond-escrow design prevents both sponsor extortion (terms fixed on-chain first) and entrant griefing (bond at risk equals sponsor costs), maintaining trustless data distribution markets.
+
+## Integration with Bitcoin
+
+The protocol's integration with Bitcoin provides security properties while creating dependencies:
+
+**Security inheritance.** Every storage protocol transaction is a Bitcoin transaction, secured by Bitcoin's full hashpower. The protocol inherits Bitcoin's immutability, censorship resistance, and ordering guarantees. Attacking the storage protocol requires attacking Bitcoin itself.
+
+**Reorg handling.** Bitcoin reorganizations are handled deterministically—the indexer's append-only database structure allows straightforward reprocessing from reorg points. Deep reorgs (beyond ~6 blocks) are extremely rare and would indicate systemic Bitcoin issues.
+
+**Censorship resistance.** The two-week proof window means sustained censorship requires excluding proof transactions for 2,016 consecutive blocks. The economic cost of this sustained attack is prohibitive. For detailed analysis of censorship and front-running attacks, see [Economic Security](/docs/economics/economic-security).
+
+**Deterministic execution.** The security model assumes all honest indexers processing the same Bitcoin history arrive at the same state. Non-deterministic behavior is eliminated through Wasmtime configuration and careful runtime design.
+
+## Attack Resistance Summary
+
+The storage protocol resists various economic attacks through mechanisms detailed in the [Economic Security](/docs/economics/economic-security) documentation:
+
+- **Selective storage** (storing partial data): High detection probability and capital cost dominance make this unprofitable. See [Capital Cost Dominance](/docs/economics/economic-security#capital-cost-dominance).
+- **Sybil attacks** (risk compartmentalization): Dynamic staking makes fragmentation prohibitively expensive. See [Sybil Resistance](/docs/economics/economic-security#sybil-resistance-via-dynamic-staking).
+- **Wash-trading** (self-storage for rewards): Upfront burned fee exceeds NPV of future rewards. See [Wash-Trading Prevention](/docs/economics/economic-security#wash-trading-prevention).
+- **Collusion** (coordinated slashing): Burn fraction ensures groups always lose money net. See [Collusion and Redistribution](/docs/economics/economic-security#collusion-and-redistribution).
+
+Each attack is prevented by ensuring expected costs exceed expected benefits—the protocol doesn't rely on detecting malicious intent but on making dishonest behavior economically irrational.
+

@@ -1,0 +1,84 @@
+---
+sidebar_position: 3
+title: Storage Node Operations
+---
+
+Storage nodes are rational economic actors seeking to maximize profit. The protocol structures incentives so that profit-maximizing behavior naturally aligns with protocol goals: storing files reliably and responding to challenges honestly. A node's decisions—whether to join agreements, which files to store, when to exit—are determined by comparing expected revenues against costs over a time horizon.
+
+## Joining File Agreements
+
+Storage nodes can join file agreements in two ways: directly (if they can obtain the file data through off-chain means) or through sponsorship (paying commission to an existing storer who provides the data). Both paths require sufficient staked KOR to cover the new commitment.
+
+**Direct joining.** If a node can acquire file data from the original user, public portals, or other sources, it broadcasts a join transaction to Bitcoin. The transaction must be signed by the node and references the target file agreement. The protocol verifies the node has sufficient stake for its projected file set (existing files plus this new file), then adds the node to the agreement. Once added, the node begins earning emissions from that file immediately and becomes eligible for challenges.
+
+**Sponsored joining.** When a node cannot obtain file data through public channels, it can enter a sponsorship arrangement with an existing storer. The process is trustless through a bond-escrow mechanism:
+
+1. The sponsor (an existing storer) posts a public sponsorship offer on-chain via transaction, specifying the target entrant, commission rate, duration, and required bond amount
+2. The entrant receives file data from the sponsor off-chain and verifies it matches the on-chain Merkle root
+3. The entrant accepts the offer by broadcasting a join transaction, which atomically locks the bond in escrow, creates the sponsorship agreement, and adds the entrant to the file agreement
+4. When the entrant is first challenged for this file, the bond is released: returned to the entrant if they prove successfully, transferred to the sponsor if they fail
+
+During the sponsorship period (measured in blocks), the entrant pays the sponsor a fraction of its emission rewards from that specific file. The commission applies only to the sponsored file—other files stored by the entrant earn full rewards. This market-driven mechanism ensures permissionless entry: any existing storer can offer sponsorship, creating competition that drives commission rates toward equilibrium.
+
+**Stake requirements.** The protocol uses a pooled stake model—each node maintains a single stake balance that must cover all its file commitments. The required stake is:
+
+$ k_{\text{req}}(n) = \left(\sum_{f \in F_n} k_f\right) \cdot \lambda_{\text{stake}}(n) $
+
+where $F_n$ is the set of files stored by node $n$, $k_f$ is the per-node base stake for each file, and $\lambda_{\text{stake}}(n) = 1 + \lambda_{\text{slash}} / \ln(2 + |F_n|)$ is the dynamic stake factor. This factor imposes a capital penalty on nodes storing few files—a node storing a single file must stake 20-30× more capital per file than a node storing thousands. This makes risk compartmentalization through Sybil identities prohibitively expensive, incentivizing operators to consolidate rather than fragment.
+
+## Revenue Streams
+
+Storage nodes earn revenue from three sources:
+
+**Storage emissions.** The primary revenue is KOR emissions distributed each block. A node storing file $f$ receives $\varepsilon_f / |N_f|$ where $\varepsilon_f$ is the file's emission allocation and $N_f$ is the set of nodes storing that file. This base reward is modified by sponsorship agreements—if the node is a sponsored entrant, it pays commission to its sponsor; if it sponsors others, it earns commissions from them. The commission applies only to the specific sponsored file, not the node's entire portfolio.
+
+Total emissions scale with KOR supply and adjust dynamically based on network health. When emission-weighted replication falls toward minimum thresholds, the emission multiplier increases, raising per-node profitability and attracting new capacity. This counter-cyclical mechanism stabilizes the network during stress.
+
+**Slashing redistribution.** When a node fails a challenge, a portion of its slashed stake $(1 - \beta_{\text{slash}}) \cdot \lambda_{\text{slash}} \cdot k_f$ is distributed equally among other nodes storing that file. This creates additional incentive for honest behavior—maintaining data and responding to challenges not only avoids being slashed but also generates revenue when others fail.
+
+**Sponsorship commissions.** Nodes can earn commissions by sponsoring entrants. The sponsor transfers file data off-chain in exchange for time-limited commission payments on the entrant's emissions from that file. The equilibrium commission rate balances the sponsor's bandwidth cost against the net present value of commission payments, typically resulting in low rates that make sponsorship attractive to entrants while profitable for sponsors.
+
+## Cost Structure
+
+Storage nodes face three categories of costs, though capital costs dominate by design:
+
+**Capital costs.** The opportunity cost of staked KOR is typically the largest expense. Staked capital cannot be used for other purposes, creating an opportunity cost $k_{\text{req}} \cdot \rho$ where $\rho$ is the operator's discount rate. With stake requirements calibrated to file emissions and the dynamic stake factor, capital costs typically exceed storage costs by factors of 10-100×. This asymmetry is what enables economic security—attacks that save storage costs while maintaining rewards must still bear full capital costs, making them unprofitable.
+
+**Proving costs.** Nodes must periodically submit storage proofs on-chain, paying Bitcoin transaction fees. The two-week proof window allows nodes to aggregate multiple challenges into a single transaction, amortizing the fee across many proofs. A node storing thousands of files can batch weeks of challenges into a single ~10 kB proof transaction, making per-challenge proving costs negligible for diversified operators.
+
+**Physical storage costs.** The cost of disk space, bandwidth for data repair and replication, and facilities are typically small compared to capital costs. These scale roughly linearly with file size but are dwarfed by the opportunity cost of capital for any realistic parameter values.
+
+## Leaving Agreements
+
+Nodes can voluntarily exit file agreements when profitability declines, but departure is constrained to protect file availability. The protocol combines preventative disincentives with programmatic restrictions.
+
+**Leave fee.** When voluntarily exiting, nodes must pay a leave fee from their spendable balance (not stake):
+
+$ \varphi_{\text{leave}} = k_f \cdot \left(\frac{n_{\text{min}}}{|N_f|}\right)^2 $
+
+The fee scales quadratically with file vulnerability—when replication is far above minimum, the fee is negligible; as replication approaches the threshold, the fee becomes prohibitively expensive. This creates hysteresis: nodes require substantial sustained losses before exit becomes rational, providing cushion against cascading exits during temporary market stress.
+
+**Minimum replication.** Voluntary departure is programmatically forbidden when $|N_f| \leq n_{\text{min}}$. Nodes at minimum replication cannot leave regardless of profitability—they're economically locked in. This ensures files never drop below the minimum threshold through voluntary action. Exit becomes possible only when new nodes join and raise replication above the minimum.
+
+**Involuntary removal.** If a node is slashed or its stake falls below requirements for other reasons, automatic stake-sufficiency restoration triggers. The node is gracefully removed from non-critical files (where $|N_f| > n_{\text{min}}$) with penalties until stake is sufficient. If that's impossible without violating minimum replication, the node's entire remaining stake is burned and it's removed from all agreements. This prevents nodes from gaming insufficiency by ensuring maximum penalty extraction.
+
+## Economic Decision Framework
+
+Nodes evaluate decisions by computing net present value over a planning horizon. To join a file agreement, a node calculates the marginal profit from adding that file—the additional emissions minus the increased capital cost, proving cost increment, and storage cost. Joining is profitable when this marginal NPV is positive.
+
+To decide whether to leave, a node compares continued participation against exit. Leaving requires paying the leave fee and forfeiting all future emissions. Staying requires continued capital lock-up and proving costs but generates ongoing emissions. The leave fee creates a substantial barrier that grows as files become more vulnerable, making premature exit expensive.
+
+The break-even condition for staying versus leaving depends on expected future emissions, capital costs, and the leave fee. For a well-replicated file with low leave fees, a small profitability decline may trigger exit. For a file near minimum replication with high leave fees, nodes require large sustained losses before exit becomes rational. This asymmetry is intentional—it prevents cascading exits when files are most vulnerable while allowing efficient exit when files are over-replicated.
+
+**Crowding and equilibrium.** As more nodes join an agreement, per-node rewards decrease (emissions are divided among more participants). This creates a natural equilibrium: files with few nodes have high per-node rewards, attracting new joiners; files with many nodes have low per-node rewards, discouraging additional joiners. The system self-balances without coordination.
+
+**Repair incentives.** If a file becomes under-replicated (through slashing or other events), per-node rewards increase hyperbolically—the same total emissions divided among fewer nodes. This creates powerful incentive for new nodes to join and "repair" the file's replication. Combined with the high leave fees preventing further exits, this mechanism stabilizes files during stress.
+
+## Operational Considerations
+
+Running a storage node requires operating a Kontor indexer—the software that processes Bitcoin blocks, maintains protocol state, tracks challenges, and verifies proofs. Without an indexer, nodes cannot know when they've been challenged or what the current protocol state is. The indexer provides the authoritative view of all active challenges, file metadata, and expiration deadlines.
+
+Nodes have complete autonomy in proof batching strategy. Within the two-week expiration window, nodes can batch any subset of pending challenges, time submissions strategically to optimize transaction fees, aggregate challenges from multiple files and multiple block heights, and respond to high-value challenges immediately while batching others. This flexibility enables nodes to optimize operational costs—a node might batch many challenges into one transaction during low-fee periods, or submit urgent proofs immediately when profitability justifies higher fees.
+
+The protocol provides no direct guarantees about retrieval service—nodes are incentivized to store data (through emissions and slashing) but not required to serve it. However, competitive markets naturally emerge: multiple nodes storing the same file can offer retrieval services at competitive prices, and users can verify data integrity through Merkle paths against the on-chain root. File retrieval typically occurs through off-chain payment channels using atomic symbol-for-payment exchanges, with erasure coding solving the final-symbol problem by allowing users to request extra symbols beyond the reconstruction threshold.
+

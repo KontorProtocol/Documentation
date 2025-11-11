@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+title: File Agreements
+---
+
+A file agreement is the protocol's commitment to store a specific file forever. Creating an agreement involves three phases: preparing the file for storage, distributing it to potential storage nodes, and broadcasting the agreement transaction to Bitcoin. Once enough nodes join and the agreement activates, the file enters the active set and begins earning emissions.
+
+## File Preparation
+
+Before anything touches the blockchain, the user prepares the file locally. This preparation transforms raw data into a fault-tolerant, self-authenticating structure that storage nodes can efficiently prove they possess.
+
+**Partitioning and encoding.** The file is partitioned into fixed 31-byte symbols—the maximum size that fits within a Pallas scalar field element (255 bits). This allows symbols to encode directly as field elements for Merkle tree construction with no intermediate hashing. The symbols are then encoded using Reed-Solomon erasure coding over GF(2^8) in a multi-codeword structure. Each codeword encodes 231 data symbols and generates 24 parity symbols (10% overhead), totaling 255 symbols per codeword. Files larger than 7,161 bytes use multiple independent codewords.
+
+This erasure coding serves a critical purpose: it ensures files remain reconstructible even when storage nodes have lost data below the detection threshold. A node can lose up to 10% of each codeword's symbols and still reconstruct the complete file. This creates a safety margin—files passing random challenges remain fully recoverable.
+
+**Merkle commitment.** The encoded symbols (data plus parity) are arranged into a binary Merkle tree using Poseidon hashing, which is optimized for arithmetic circuits and requires hundreds of constraints per invocation versus thousands for SHA-256. The tree's root serves as a cryptographic commitment to the entire file. Each symbol becomes exactly one Merkle leaf, ensuring 1:1 correspondence between challenged data and tree leaves. When the tree has an odd number of nodes at any level, the final node is duplicated (hashed with itself) to maintain uniform circuit structure.
+
+**Verification and distribution.** The user computes a file identifier as the SHA-256 hash of the original data and distributes both the original file bytes and the public metadata (Merkle root, file size, erasure parameters) to potential storage nodes off-chain—typically through direct peer-to-peer transfer or public storage portals. Nodes independently prepare the file using the protocol's deterministic algorithm and verify that their computed Merkle root matches the user's commitment. This ensures nodes can verify data integrity without trusting the user's computation.
+
+## Agreement Creation
+
+Once the file is prepared and distributed, the user broadcasts a file agreement creation transaction to Bitcoin. This transaction embeds the file metadata—Merkle root, file identifier, size, erasure configuration—in the witness data using Kontor's Taproot commit-reveal pattern. The metadata contains everything needed to identify and verify the file, but not the file contents themselves.
+
+**Economic parameters.** The protocol assigns the file a unique creation rank based on when it enters the network. This rank is sequential and immutable: the first file has rank 1, the second has rank 2, and so on. The rank determines the file's emission weight, which controls its perpetual share of network rewards:
+
+$ ω_f = \ln(s_f^{\text{bytes}}) / \ln(1 + \text{rank}_f) $
+
+Files created when the network is small receive permanently higher emission weights than identical files created later. This "grandfathering" effect creates bootstrap incentives—early participants take on greater risk with an unproven protocol and are compensated through permanently higher returns. The logarithmic scaling of file size ensures that a 1 GB file has only about twice the emission weight of a 1 MB file, making both small critical files and large archival data equally attractive to store.
+
+The user pays a one-time storage fee calculated deterministically from current network parameters:
+
+$ υ_f = χ_{\text{fee}} \cdot k_f $
+
+where $k_f$ is the per-node base stake requirement for this file and $χ_{\text{fee}}$ is a fixed protocol parameter. This fee is immediately burned—it does not fund the storage but serves as a spam deterrent and deflationary mechanism. The actual storage incentive comes from perpetual KOR emissions.
+
+**Activation threshold.** The agreement enters the protocol state in an inactive state. It remains inactive until storage nodes holding the file data broadcast transactions to join the agreement. When the agreement reaches the minimum required number of nodes, it activates. At this point, the file enters the active file set, its emission weight adds to the global network total, and the file becomes eligible for challenges. Activation is permanent—once active, file agreements never deactivate.
+
+## File Size and Scaling
+
+The protocol currently supports files from 1 KB (minimum) to 1 GB (maximum). The minimum prevents spam and ensures reasonable proving costs relative to storage value. The maximum is determined by practical constraints—tree depth, memory requirements, proving time—rather than fundamental protocol limitations. A 1 GB file requires tree depth around 26, which remains practical for proof generation and verification.
+
+**Logarithmic economics.** The logarithmic scaling of emission weights, stake requirements, and user fees creates a deliberately regressive cost-per-byte structure. This design principle reflects a fundamental truth: the economic value of data is independent of its physical size. A 1 KB file containing a private key may be far more valuable than a 1 GB video file. Linear scaling would create structural bias where large files dominate emissions, making small but critical files economically unattractive to store.
+
+The logarithmic relationship compresses size differences. A file 1,000× larger in bytes has only about 2× higher emission weight, stake requirement, and user fee. This ensures:
+- **Fair node incentives:** Return on capital is roughly constant across file sizes, making both small and large files similarly attractive to store
+- **Equitable user costs:** Small files face no economic barriers while users consuming more storage resources still pay proportionally larger (but sublinear) total fees
+- **Uniform security:** All files receive the same level of commitment from storage nodes regardless of their physical size
+
+This is a deliberate choice to engineer an economy that prioritizes data security irrespective of data size, ensuring the protocol serves blockchain applications equally well whether storing NFT metadata or protocol snapshots.

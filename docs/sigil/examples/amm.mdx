@@ -30,9 +30,9 @@ and exports functions:
 - `quote-swap`: Receive a quote of out-tokens received when swapping
 
 ```wit
-package kontor:contract;
+package root:component;
 
-world contract {
+world root {
     include kontor:built-in/built-in;
     use kontor:built-in/context.{view-context, proc-context, signer};
     use kontor:built-in/error.{error};
@@ -169,7 +169,7 @@ fn calc_swap_result(
 
 fn get_pool(ctx: &impl ReadContext, pair: &TokenPair) -> Result<PoolWrapper, Error> {
     let id = pair_id(pair);
-    let pools = storage(ctx).pools();
+    let pools = ctx.model().pools();
     pools
         .get(ctx, &id)
         .ok_or_else(|| Error::Message("Pool not found".to_string()))
@@ -262,7 +262,7 @@ impl Guest for Amm {
         let lp_shares = (amount_a * amount_b).sqrt()?;
 
         let admin = ctx.signer().to_string();
-        storage(ctx).pools().set(
+        ctx.model().pools().set(
             ctx,
             pair_id(&pair),
             Pool {
@@ -325,7 +325,7 @@ impl Guest for Amm {
         let pool = get_pool(ctx, &pair)?;
         let res = quote_deposit(ctx, &pool, amount_a, amount_b)?;
         let ledger = pool.lp_ledger();
-        let addr = storage(ctx).custodian(ctx);
+        let addr = ctx.model().custodian(ctx);
         pool.set_balance_a(ctx, pool.balance_a(ctx) + res.deposit_a);
         pool.set_balance_b(ctx, pool.balance_b(ctx) + res.deposit_b);
 
@@ -418,7 +418,7 @@ impl Guest for Amm {
         token_dyn::transfer(
             &token_in,
             ctx.signer(),
-            &storage(ctx).custodian(ctx),
+            &ctx.model().custodian(ctx),
             amount_in,
         )?;
         token_dyn::transfer(

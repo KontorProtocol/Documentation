@@ -14,9 +14,9 @@ This example closely mirrors the AMM contract's logic but supports only one toke
 ## WIT Interface
 
 ```wit
-package kontor:contract;
+package root:component;
 
-world contract {
+world root {
     include kontor:built-in/built-in;
     use kontor:built-in/context.{view-context, proc-context, signer};
     use kontor:built-in/error.{error};
@@ -106,8 +106,8 @@ impl PoolStorage {
 }
 
 fn token_out(ctx: &impl ReadContext, token_in: &ContractAddress) -> Result<ContractAddress, Error> {
-    let token_a = storage(ctx).token_a(ctx);
-    let token_b = storage(ctx).token_b(ctx);
+    let token_a = ctx.model().token_a(ctx);
+    let token_b = ctx.model().token_b(ctx);
     if token_in == &token_a {
         Ok(token_b)
     } else if token_in == &token_b {
@@ -152,10 +152,10 @@ fn quote_swap(
     token_in: &ContractAddress,
     amount_in: Integer,
 ) -> Result<Integer, Error> {
-    let custodian = storage(ctx).custodian(ctx);
+    let custodian = ctx.model().custodian(ctx);
     let bal_in = token_dyn::balance(token_in, &custodian).unwrap_or_default();
     let bal_out = token_dyn::balance(&token_out(ctx, token_in)?, &custodian).unwrap_or_default();
-    calc_swap_result(amount_in, bal_in, bal_out, storage(ctx).fee_bps(ctx))
+    calc_swap_result(amount_in, bal_in, bal_out, ctx.model().fee_bps(ctx))
 }
 
 fn quote_deposit(
@@ -166,11 +166,11 @@ fn quote_deposit(
     validate_amount(amount_a)?;
     validate_amount(amount_b)?;
 
-    let token_a = storage(ctx).token_a(ctx);
-    let token_b = storage(ctx).token_b(ctx);
-    let lp_supply = storage(ctx).lp_total_supply(ctx);
+    let token_a = ctx.model().token_a(ctx);
+    let token_b = ctx.model().token_b(ctx);
+    let lp_supply = ctx.model().lp_total_supply(ctx);
 
-    let custodian = storage(ctx).custodian(ctx);
+    let custodian = ctx.model().custodian(ctx);
     let bal_a = token_dyn::balance(&token_a, &custodian).unwrap_or_default();
     let bal_b = token_dyn::balance(&token_b, &custodian).unwrap_or_default();
 
@@ -191,11 +191,11 @@ fn quote_deposit(
 fn quote_withdraw(ctx: &impl ReadContext, shares: Integer) -> Result<WithdrawResult, Error> {
     validate_amount(shares)?;
 
-    let token_a = storage(ctx).token_a(ctx);
-    let token_b = storage(ctx).token_b(ctx);
-    let lp_supply = storage(ctx).lp_total_supply(ctx);
+    let token_a = ctx.model().token_a(ctx);
+    let token_b = ctx.model().token_b(ctx);
+    let lp_supply = ctx.model().lp_total_supply(ctx);
 
-    let custodian = storage(ctx).custodian(ctx);
+    let custodian = ctx.model().custodian(ctx);
     let bal_a = token_dyn::balance(&token_a, &custodian).unwrap_or_default();
     let bal_b = token_dyn::balance(&token_b, &custodian).unwrap_or_default();
 
@@ -238,20 +238,20 @@ impl Guest for Pool {
         fee: Integer,
     ) -> Result<Integer, Error> {
         PoolStorage::new(ctx, token_a, amount_a, token_b, amount_b, fee)?.init(ctx);
-        Ok(storage(ctx).lp_total_supply(ctx))
+        Ok(ctx.model().lp_total_supply(ctx))
     }
 
     fn fee(ctx: &ViewContext) -> Integer {
-        storage(ctx).fee_bps(ctx)
+        ctx.model().fee_bps(ctx)
     }
 
     fn balance(ctx: &ViewContext, acc: String) -> Option<Integer> {
-        storage(ctx).lp_ledger().get(ctx, acc)
+        ctx.model().lp_ledger().get(ctx, acc)
     }
 
     fn transfer(ctx: &ProcContext, to: String, n: Integer) -> Result<(), Error> {
         let from = ctx.signer().to_string();
-        let ledger = storage(ctx).lp_ledger();
+        let ledger = ctx.model().lp_ledger();
 
         let from_balance = ledger.get(ctx, &from).unwrap_or_default();
         let to_balance = ledger.get(ctx, &to).unwrap_or_default();
@@ -266,7 +266,7 @@ impl Guest for Pool {
 
     fn token_balance(ctx: &ViewContext, token: ContractAddress) -> Result<Integer, Error> {
         token_out(ctx, &token)?;
-        Ok(token_dyn::balance(&token, &storage(ctx).custodian(ctx)).unwrap_or_default())
+        Ok(token_dyn::balance(&token, &ctx.model().custodian(ctx)).unwrap_or_default())
     }
 
     fn quote_deposit(
@@ -283,22 +283,22 @@ impl Guest for Pool {
         amount_b: Integer,
     ) -> Result<DepositResult, Error> {
         let res = quote_deposit(ctx, amount_a, amount_b)?;
-        let ledger = storage(ctx).lp_ledger();
-        let custodian = storage(ctx).custodian(ctx);
+        let ledger = ctx.model().lp_ledger();
+        let custodian = ctx.model().custodian(ctx);
 
         let user = ctx.signer().to_string();
         let bal = ledger.get(ctx, &user).unwrap_or_default();
         ledger.set(ctx, user, bal + res.lp_shares);
-        storage(ctx).set_lp_total_supply(ctx, storage(ctx).lp_total_supply(ctx) + res.lp_shares);
+        ctx.model().set_lp_total_supply(ctx, ctx.model().lp_total_supply(ctx) + res.lp_shares);
 
         token_dyn::transfer(
-            &storage(ctx).token_a(ctx),
+            &ctx.model().token_a(ctx),
             ctx.signer(),
             &custodian,
             res.deposit_a,
         )?;
         token_dyn::transfer(
-            &storage(ctx).token_b(ctx),
+            &ctx.model().token_b(ctx),
             ctx.signer(),
             &custodian,
             res.deposit_b,
@@ -314,10 +314,10 @@ impl Guest for Pool {
     fn withdraw(ctx: &ProcContext, shares: Integer) -> Result<WithdrawResult, Error> {
         let res = quote_withdraw(ctx, shares)?;
 
-        let ledger = storage(ctx).lp_ledger();
+        let ledger = ctx.model().lp_ledger();
         let user = ctx.signer().to_string();
 
-        let total = storage(ctx).lp_total_supply(ctx);
+        let total = ctx.model().lp_total_supply(ctx);
         let bal = ledger.get(ctx, &user).unwrap_or_default();
 
         if total < shares {
@@ -328,16 +328,16 @@ impl Guest for Pool {
         }
 
         ledger.set(ctx, user.clone(), bal - shares);
-        storage(ctx).set_lp_total_supply(ctx, total - shares);
+        ctx.model().set_lp_total_supply(ctx, total - shares);
 
         token_dyn::transfer(
-            &storage(ctx).token_a(ctx),
+            &ctx.model().token_a(ctx),
             ctx.contract_signer(),
             &user,
             res.amount_a,
         )?;
         token_dyn::transfer(
-            &storage(ctx).token_b(ctx),
+            &ctx.model().token_b(ctx),
             ctx.contract_signer(),
             &user,
             res.amount_b,
@@ -373,7 +373,7 @@ impl Guest for Pool {
         token_dyn::transfer(
             &token_in,
             ctx.signer(),
-            &storage(ctx).custodian(ctx),
+            &ctx.model().custodian(ctx),
             amount_in,
         )?;
         token_dyn::transfer(
@@ -396,71 +396,29 @@ impl Guest for Pool {
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "token-a",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+    interface!(name = "pool");
+    interface!(name = "token_a", path = "../token/contract/wit");
+    interface!(name = "token_b", path = "../token/contract/wit");
 
-    import!(
-        name = "token-b",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
-
-    import!(
-        name = "pool",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
-
-    interface!(name = "token-dyn", path = "../token/contract/wit",);
-
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("pool", &contract_bytes().await?),
-                    ("token-a", &dep_contract_bytes("token").await?),
-                    ("token-b", &dep_contract_bytes("token").await?),
-                ])
-                .build(),
-        )
-        .await?;
+        let admin = runtime.identity().await?;
+        let minter = runtime.identity().await?;
 
-        let token_a = ContractAddress {
-            name: "token-a".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        let pool = runtime.publish(&admin, "pool").await?;
+        let token_a = runtime.publish(&admin, "token").await?;
+        let token_b = runtime.publish(&admin, "token").await?;
 
-        let token_b = ContractAddress {
-            name: "token-b".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        token_a::mint(runtime, &token_a, &minter, 1000.into()).await??;
+        token_b::mint(runtime, &token_b, &minter, 1000.into()).await??;
 
-        let pool_address = ContractAddress {
-            name: "pool".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
-
-        let admin = "test_admin";
-        let minter = "test_minter";
-        token_a::mint(&runtime, minter, 1000.into()).await?;
-        token_b::mint(&runtime, minter, 1000.into()).await?;
-
-        token_a::transfer(&runtime, minter, admin, 100.into()).await??;
-        token_b::transfer(&runtime, minter, admin, 500.into()).await??;
+        token_a::transfer(runtime, &token_a, &minter, &admin, 100.into()).await??;
+        token_b::transfer(runtime, &token_b, &minter, &admin, 500.into()).await??;
 
         let res = pool::re_init(
-            &runtime,
-            admin,
+            runtime,
+            &pool,
+            &admin,
             token_a.clone(),
             100.into(),
             token_b.clone(),

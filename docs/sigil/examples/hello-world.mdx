@@ -10,15 +10,13 @@ This example illustrates the fundamental structure of a simple Sigil contract, s
 </Note>
 
 ## WIT Interface
-- Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink
-- Exports:
-  - `init`: All contracts must implement an `init` function which will be run automatically at publication
-  - `hello-world`: A simple view function that returns a string
+
+Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink and exports two functions: `init` (called once at deployment) and `hello-world` (returns a greeting string).
 
 ```wit contract/wit/contract.wit
-package kontor:contract;
+package root:component;
 
-world contract {
+world root {
     include kontor:built-in/built-in;
     use kontor:built-in/context.{view-context, proc-context};
 
@@ -48,37 +46,30 @@ impl Guest for HelloWorld {
 ```
 
 ## Testing
-The test in `test/src/lib.rs`:
-- The `use testlib::*` import populates the namespace with trait implementations and types to make testing contracts as close to calling Rust functions as possible.
-- `contract_bytes()` loads the bytes of the `hello-world` contract.
-- `import!` generates a module named `hello_world` (the snake case version of the `name` `hello-world`) that exposes functions matching the contract's exports, providing a convenient interface for interacting with it.
-- Calls `hello_world`, and verifies the output.
+
+The test in `test/src/lib.rs` uses the `testlib` crate which provides automatic runtime injection and contract loading:
 
 ```rust test/src/lib.rs
 #[cfg(test)]
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "hello-world",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "hello-world", path = "contract/wit");
 
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[("hello-world", &contract_bytes().await?)])
-                .build(),
-        )
-        .await?;
-
-        let result = hello_world::hello_world(&runtime).await?;
+        let alice = runtime.identity().await?;
+        let hello_world = runtime.publish(&alice, "hello-world").await?;
+        let result = hello_world::hello_world(runtime, &hello_world).await?;
         assert_eq!(result, "Hello, World!");
-
         Ok(())
     }
 }
 ```
+
+**Key points:**
+- `interface!` generates type-safe bindings from the WIT file
+- `#[testlib::test]` auto-injects the `runtime` variable
+- `runtime.identity()` creates a test user
+- `runtime.publish()` deploys the contract and returns its address
+- Contract functions are called as `hello_world::function(runtime, &address, ...)`

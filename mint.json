@@ -18,8 +18,8 @@
   "topbarLinks": [],
   "tabs": [
     {
-      "name": "Home",
-      "url": "docs/home"
+      "name": "Introduction",
+      "url": "docs/introduction"
     },
     {
       "name": "Kontor Protocol",
@@ -41,26 +41,19 @@
   "anchors": [],
   "navigation": [
     {
-      "group": "Home",
-      "pages": [
-        "docs/home"
-      ]
-    },
-    {
       "group": "Introduction",
       "pages": [
-        "docs/kontor/what-is-kontor",
-        "docs/kontor/why-kontor",
-        "docs/kontor/how-it-works"
+        "docs/introduction/home",
+        "docs/introduction/what-is-kontor",
+        "docs/introduction/why-kontor",
+        "docs/introduction/how-it-works",
+        "docs/introduction/core-concepts"
       ]
     },
     {
       "group": "Core Concepts",
       "pages": [
         "docs/kontor/architecture",
-        "docs/kontor/smart-contracts",
-        "docs/kontor/file-storage",
-        "docs/kontor/tokenomics",
         "docs/kontor/security"
       ]
     },

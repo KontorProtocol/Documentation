@@ -3,10 +3,6 @@ title: Core Concepts
 mode: wide
 ---
 
-<div className="page-intro">
-Three fundamental concepts underpin how Kontor works: embedded consensus, the dual-token model, and the hybrid UTXO support.
-</div>
-
 ## Embedded Consensus
 
 As a metaprotocol on Bitcoin, Kontor uses "embedded consensus": it derives state from Bitcoin without implementing its own consensus mechanism. Bitcoin miners order transactions and secure them with proof-of-work; Kontor indexers process those transactions according to additional rules. Because Bitcoin provides an immutable, timestamped log of all Kontor operations, and because Kontor's execution rules are deterministic, every indexer processing the same Bitcoin history arrives at the same state.

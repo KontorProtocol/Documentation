@@ -74,7 +74,7 @@ impl Guest for Proxy {
 **Key points:**
 - Storage accessed via `ctx.model()` 
 - `fallback` handles missing function calls by forwarding to the target contract
-- Uses `if let Some(...)` to safely handle the Option<ContractAddress>
+- Uses `if let Some(...)` to safely handle the `Option<ContractAddress>`
 - `FallContext` can be converted to ViewContext for read-only access
 - `foreign::call` is the low-level API used by `interface!` and `import!` macros
 

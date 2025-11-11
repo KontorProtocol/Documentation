@@ -23,3 +23,27 @@ Planned features include:
 The primary goal of the Sigil framework is to make writing safe, secure smart contracts easy and natural. Unlike other smart contract frameworks, writing contracts in Sigil is designed to feel like writing normal software, requiring developers to learn a minimum number of additional concepts and to jump through as few hoops as possible to write, deploy and run their contracts on Bitcoin with Kontor.
 
 Sigil notably leverages the WebAssembly Component Model to allow contracts to link natively and with full type-safety. This provides deep integration with conventional IDEs and popular Rust tooling. It shifts errors to build-time, keeps determinism and gas behavior predictable, and reduces the trusted computing base. Sigil thus dramatically improves developer ergonomics while fully supporting a flexible and extensible ecosystem built on open standards.
+
+## WebAssembly Component Model
+
+WebAssembly is a natural choice for blockchain smart contracts because it offers deterministic execution, efficient bytecode, and broad language support. However, most WASM-based blockchain platforms treat contracts as isolated modules with custom ABIs for host interaction—requiring developers to manually serialize data, manage dependencies, and coordinate interfaces through ad-hoc conventions.
+
+Sigil takes a new approach by adopting the WebAssembly Component Model, a standardized system for composing WASM modules with typed interfaces. This means contracts can call each other with full type safety, interfaces are specified in a language-agnostic IDL (WIT), and integration errors are caught at compile time rather than discovered when transactions fail on-chain.
+
+## Type Safety
+
+In Sigil, contracts export functions with explicit signatures defined in WIT. If Contract A calls Contract B, Sigil generates a typed stub for B's interface that A imports at compile time. If B's interface changes—say, adding a field to a struct or modifying a function parameter—A will fail to compile until the change is addressed. This eliminates an entire class of bugs common in other smart contract systems, where interface mismatches cause runtime failures after deployment.
+
+The same type checking applies to storage: Sigil's storage system uses a path-based hierarchy with Rust traits that ensure you can't accidentally store the wrong type at a given path or retrieve a value with an incorrect type annotation.
+
+## Contract Structure and Execution
+
+A Sigil contract defines an `init` function (called once when the contract is deployed), procedural functions that can read and write state, and view functions that are read-only. Functions receive a context object that provides access to the transaction signer, enables cross-contract calls, and exposes storage operations.
+
+Storage is lazy-loaded—reading a value queries the database only for that specific path rather than deserializing an entire contract state object. This makes gas costs predictable and proportional to actual usage. Cross-contract calls are synchronous and type-checked; the callee executes immediately within the caller's transaction, and re-entrancy is prohibited to prevent common exploit patterns.
+
+## Developer Experience
+
+Sigil provides simple macros that generate the necessary boilerplate, allowing developers to focus on application logic rather than framework integration. The `contract!` macro sets up the module structure and WIT bindings. The `#[derive(Storage)]` macro generates typed accessors for contract state. Cross-contract calls use the `import!` macro to pull in another contract's interface and generate a local stub.
+
+The result is code that looks like ordinary Rust: strongly typed, well-integrated with language tooling, and testable using standard Rust test frameworks. Because the runtime primitives are abstracted behind traits, the same contract code runs in unit tests (with an in-memory backend) and on-chain (with the indexer's SQLite backend) without modification.

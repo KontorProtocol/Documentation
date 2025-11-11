@@ -39,17 +39,17 @@ You will receive a ZIP package containing two Rust workspaces. Follow these step
    │   ├── src/
    │   ├── Cargo.toml
    │   └── ...
-   └── sigil-example-contracts/
+   └── example-contracts/
        ├── hello-world/
        ├── token/
        └── ...
    ```
    - `kontor/`: Contains the core implementation and dependencies for Sigil. You don't need to modify this directly.
-   - `sigil-example-contracts/`: Contains a set of example contracts that highlight some of Sigil's most important features.
+   - `example-contracts/`: Contains a set of example contracts that highlight some of Sigil's most important features.
 
 2. **Navigate to the Example Contract**:
    ```bash
-   cd sigil-example-contracts/hello-world
+   cd example-contracts/hello-world
    ```
 
 3. **Run the Tests**:
@@ -60,5 +60,5 @@ You will receive a ZIP package containing two Rust workspaces. Follow these step
 
 ## Next Steps
 The `hello-world/` example contracts provides a basic Sigil smart contract template. You can:
-- Work directly in the `hello-world/` directory to experiment with the example contract. Avoid opening the entire `sigil-example-contracts/` folder in your editor as the multiple contract workspaces contained within will confuse the Rust language server.
+- Work directly in the `hello-world/` directory to experiment with the example contract. Avoid opening the entire `example-contracts/` folder in your editor as the multiple contract workspaces contained within will confuse the Rust language server.
 - Copy and paste the `hello-world/` folder to create new contracts, using it as a starting point.

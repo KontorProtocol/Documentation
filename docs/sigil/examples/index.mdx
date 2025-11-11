@@ -10,10 +10,9 @@ This section covers the example contracts in `example-contracts/`. Each is a sel
 1. **hello-world** → Minimal contract structure, basic functions
 2. **token** → Map-based ledger, Integer type, error handling
 3. **shared-account** → Nested Maps, authorization patterns
-4. **shared-account-dynamic** → Dynamic contract addresses
-5. **proxy** → Fallback function, delegation patterns
-6. **pool** → DeFi math, liquidity pools
-7. **amm** → Multi-pool AMM, production patterns
+4. **proxy** → Fallback function, delegation patterns
+5. **pool** → DeFi math, liquidity pools
+6. **amm** → Multi-pool AMM, production patterns
 
 {/* Note: arith and fib examples exist in SMART_CONTRACTS_GUIDE but not yet in docs */}
 
@@ -43,15 +42,7 @@ Multi-tenant account management with two-level nested Maps, authorization patter
 
 ---
 
-### shared-account-dynamic (extended)
-
-Extended shared-account with dynamic token contract addresses stored in state, enabling runtime token selection and flexible contract configuration.
-
-[View Example →](/docs/sigil/examples/shared-account-dynamic)
-
----
-
-### proxy (31 lines)
+### proxy
 
 Generic contract delegation using the fallback function, FallContext, and `foreign::call` for dynamic forwarding. Demonstrates proxy/upgrade patterns.
 

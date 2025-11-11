@@ -9,7 +9,6 @@ uninlined_format_args = "allow"
 too_many_arguments = "allow"
 
 [dependencies]
-wit-bindgen = { workspace = true }
 stdlib = { workspace = true }
 
 [lib]

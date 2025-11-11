@@ -9,4 +9,3 @@ doctest = false
 [dependencies]
 testlib = { workspace = true }
 stdlib = { workspace = true }
-tokio = { workspace = true }

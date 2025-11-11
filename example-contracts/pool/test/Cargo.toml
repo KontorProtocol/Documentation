@@ -6,9 +6,11 @@ edition = "2024"
 [lib]
 doctest = false
 
+[lints.clippy]
+too_many_arguments = "allow"
+
 [dependencies]
 testlib = { workspace = true }
 stdlib = { workspace = true }
-tokio = { workspace = true }
 
 token-test = { path = "../../token/test" }

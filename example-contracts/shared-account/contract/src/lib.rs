@@ -2,12 +2,7 @@ use stdlib::*;
 
 contract!(name = "shared-account");
 
-import!(
-    name = "token",
-    height = 0,
-    tx_index = 0,
-    path = "../token/contract/wit"
-);
+interface!(name = "token", path = "../token/contract/wit");
 
 #[derive(Clone, Default, Storage)]
 struct Account {
@@ -21,24 +16,24 @@ struct SharedAccountStorage {
     pub accounts: Map<String, Account>,
 }
 
-fn authorized(ctx: &ProcContext, account: &AccountWrapper) -> bool {
-    account.owner(ctx) == ctx.signer().to_string()
+fn authorized(signer: &Signer, account: &AccountModel) -> bool {
+    account.owner() == signer.to_string()
         || account
             .other_tenants()
-            .get(ctx, ctx.signer().to_string())
+            .get(signer.to_string())
             .is_some_and(|b| b)
 }
 
 fn insufficient_balance_error() -> Error {
-    Error::new("insufficient balance")
+    Error::Message("insufficient balance".to_string())
 }
 
 fn unauthorized_error() -> Error {
-    Error::new("unauthorized")
+    Error::Message("unauthorized".to_string())
 }
 
 fn unknown_error() -> Error {
-    Error::new("unknown account")
+    Error::Message("unknown account".to_string())
 }
 
 impl Guest for SharedAccount {
@@ -46,15 +41,20 @@ impl Guest for SharedAccount {
         SharedAccountStorage::default().init(ctx);
     }
 
-    fn open(ctx: &ProcContext, n: Integer, other_tenants: Vec<String>) -> Result<String, Error> {
+    fn open(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        n: Integer,
+        other_tenants: Vec<String>,
+    ) -> Result<String, Error> {
+        let signer = ctx.signer();
         let balance =
-            token::balance(&ctx.signer().to_string()).ok_or(insufficient_balance_error())?;
+            token::balance(&token, &signer.to_string()).ok_or(insufficient_balance_error())?;
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        let account_id = crypto::generate_id();
-        storage(ctx).accounts().set(
-            ctx,
+        let account_id = ctx.generate_id();
+        ctx.model().accounts().set(
             account_id.clone(),
             Account {
                 balance: n,
@@ -67,55 +67,74 @@ impl Guest for SharedAccount {
                 ),
             },
         );
-        token::transfer(ctx.signer(), &ctx.contract_signer().to_string(), n)?;
+        token::transfer(&token, signer, &ctx.contract_signer().to_string(), n)?;
         Ok(account_id)
     }
 
-    fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
+    fn deposit(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        account_id: String,
+        n: Integer,
+    ) -> Result<(), Error> {
+        let signer = ctx.signer();
         let balance =
-            token::balance(&ctx.signer().to_string()).ok_or(insufficient_balance_error())?;
+            token::balance(&token, &signer.to_string()).ok_or(insufficient_balance_error())?;
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        let account = storage(ctx)
+        let account = ctx
+            .model()
             .accounts()
-            .get(ctx, account_id)
+            .get(account_id)
             .ok_or(unknown_error())?;
-        if !authorized(ctx, &account) {
+        if !authorized(&signer, &account) {
             return Err(unauthorized_error());
         }
-        account.set_balance(ctx, account.balance(ctx) + n);
-        token::transfer(ctx.signer(), &ctx.contract_signer().to_string(), n)
+        account.update_balance(|b| b + n);
+        token::transfer(&token, signer, &ctx.contract_signer().to_string(), n)
     }
 
-    fn withdraw(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
-        let account = storage(ctx)
+    fn withdraw(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        account_id: String,
+        n: Integer,
+    ) -> Result<(), Error> {
+        let signer = ctx.signer();
+        let account = ctx
+            .model()
             .accounts()
-            .get(ctx, account_id)
+            .get(account_id)
             .ok_or(unknown_error())?;
-        if !authorized(ctx, &account) {
+        if !authorized(&signer, &account) {
             return Err(unauthorized_error());
         }
-        let balance = account.balance(ctx);
+        let balance = account.balance();
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        account.set_balance(ctx, balance - n);
-        token::transfer(ctx.contract_signer(), &ctx.signer().to_string(), n)
+        account.set_balance(balance - n);
+        token::transfer(&token, ctx.contract_signer(), &signer.to_string(), n)
     }
 
     fn balance(ctx: &ViewContext, account_id: String) -> Option<Integer> {
-        storage(ctx)
-            .accounts()
-            .get(ctx, account_id)
-            .map(|a| a.balance(ctx))
+        ctx.model().accounts().get(account_id).map(|a| a.balance())
+    }
+
+    fn token_balance(
+        _ctx: &ViewContext,
+        token: ContractAddress,
+        holder: String,
+    ) -> Option<Integer> {
+        token::balance(&token, &holder)
     }
 
     fn tenants(ctx: &ViewContext, account_id: String) -> Option<Vec<String>> {
-        storage(ctx).accounts().get(ctx, account_id).map(|a| {
-            [a.owner(ctx)]
+        ctx.model().accounts().get(account_id).map(|a| {
+            [a.owner()]
                 .into_iter()
-                .chain(a.other_tenants().keys(ctx))
+                .chain(a.other_tenants().keys())
                 .collect()
         })
     }

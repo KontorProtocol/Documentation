@@ -171,7 +171,7 @@ fn get_pool(ctx: &impl ReadContext, pair: &TokenPair) -> Result<PoolWrapper, Err
     let id = pair_id(pair);
     let pools = ctx.model().pools();
     pools
-        .get(ctx, &id)
+        .get(&id)
         .ok_or_else(|| Error::Message("Pool not found".to_string()))
 }
 
@@ -183,11 +183,11 @@ fn quote_swap(
 ) -> Result<Integer, Error> {
     let pool = get_pool(ctx, pair)?;
     let (bal_in, bal_out) = if token_in == &pair.a {
-        (pool.balance_a(ctx), pool.balance_b(ctx))
+        (pool.balance_a(), pool.balance_b())
     } else {
-        (pool.balance_b(ctx), pool.balance_a(ctx))
+        (pool.balance_b(), pool.balance_a())
     };
-    calc_swap_result(amount_in, bal_in, bal_out, pool.fee_bps(ctx))
+    calc_swap_result(amount_in, bal_in, bal_out, pool.fee_bps())
 }
 
 fn quote_deposit(
@@ -199,9 +199,9 @@ fn quote_deposit(
     validate_amount(amount_a)?;
     validate_amount(amount_b)?;
 
-    let lp_supply = pool.lp_total_supply(ctx);
-    let balance_a = pool.balance_a(ctx);
-    let balance_b = pool.balance_b(ctx);
+    let lp_supply = pool.lp_total_supply();
+    let balance_a = pool.balance_a();
+    let balance_b = pool.balance_b();
     let lp_shares = if amount_a * balance_b < amount_b * balance_a {
         amount_a * lp_supply / balance_a
     } else {
@@ -223,10 +223,10 @@ fn quote_withdraw(
 ) -> Result<WithdrawResult, Error> {
     validate_amount(shares)?;
 
-    let lp_total_supply = pool.lp_total_supply(ctx);
+    let lp_total_supply = pool.lp_total_supply();
     Ok(WithdrawResult {
-        amount_a: shares * pool.balance_a(ctx) / lp_total_supply,
-        amount_b: shares * pool.balance_b(ctx) / lp_total_supply,
+        amount_a: shares * pool.balance_a() / lp_total_supply,
+        amount_b: shares * pool.balance_b() / lp_total_supply,
     })
 }
 
@@ -284,13 +284,13 @@ impl Guest for Amm {
     }
 
     fn fee(ctx: &ViewContext, pair: TokenPair) -> Result<Integer, Error> {
-        Ok(get_pool(ctx, &pair)?.fee_bps(ctx))
+        Ok(get_pool(ctx, &pair)?.fee_bps())
     }
 
     fn balance(ctx: &ViewContext, pair: TokenPair, acc: String) -> Option<Integer> {
         get_pool(ctx, &pair)
             .ok()
-            .and_then(|p| p.lp_ledger().get(ctx, acc))
+            .and_then(|p| p.lp_ledger().get(acc))
     }
 
     fn token_balance(
@@ -301,9 +301,9 @@ impl Guest for Amm {
         pair_other_token(&pair, &token)?;
         let pool = get_pool(ctx, &pair)?;
         if token == pair.a {
-            Ok(pool.balance_a(ctx))
+            Ok(pool.balance_a())
         } else {
-            Ok(pool.balance_b(ctx))
+            Ok(pool.balance_b())
         }
     }
 
@@ -325,14 +325,14 @@ impl Guest for Amm {
         let pool = get_pool(ctx, &pair)?;
         let res = quote_deposit(ctx, &pool, amount_a, amount_b)?;
         let ledger = pool.lp_ledger();
-        let addr = ctx.model().custodian(ctx);
-        pool.set_balance_a(ctx, pool.balance_a(ctx) + res.deposit_a);
-        pool.set_balance_b(ctx, pool.balance_b(ctx) + res.deposit_b);
+        let addr = ctx.model().custodian();
+        pool.set_balance_a(pool.balance_a() + res.deposit_a);
+        pool.set_balance_b(pool.balance_b() + res.deposit_b);
 
         let user = ctx.signer().to_string();
-        let bal = ledger.get(ctx, &user).unwrap_or_default();
-        ledger.set(ctx, user, bal + res.lp_shares);
-        pool.set_lp_total_supply(ctx, pool.lp_total_supply(ctx) + res.lp_shares);
+        let bal = ledger.get(&user).unwrap_or_default();
+        ledger.set(user, bal + res.lp_shares);
+        pool.set_lp_total_supply(pool.lp_total_supply() + res.lp_shares);
 
         token_dyn::transfer(&pair.a, ctx.signer(), &addr, res.deposit_a)?;
         token_dyn::transfer(&pair.b, ctx.signer(), &addr, res.deposit_b)?;
@@ -359,8 +359,8 @@ impl Guest for Amm {
         let ledger = pool.lp_ledger();
         let user = ctx.signer().to_string();
 
-        let total = pool.lp_total_supply(ctx);
-        let bal = ledger.get(ctx, &user).unwrap_or_default();
+        let total = pool.lp_total_supply();
+        let bal = ledger.get(&user).unwrap_or_default();
 
         if total < shares {
             return Err(Error::Message("insufficient total supply".to_string()));
@@ -369,10 +369,10 @@ impl Guest for Amm {
             return Err(Error::Message("insufficient share balance".to_string()));
         }
 
-        ledger.set(ctx, user.clone(), bal - shares);
-        pool.set_lp_total_supply(ctx, total - shares);
-        pool.set_balance_a(ctx, pool.balance_a(ctx) - res.amount_a);
-        pool.set_balance_b(ctx, pool.balance_b(ctx) - res.amount_b);
+        ledger.set(user.clone(), bal - shares);
+        pool.set_lp_total_supply(total - shares);
+        pool.set_balance_a(pool.balance_a() - res.amount_a);
+        pool.set_balance_b(pool.balance_b() - res.amount_b);
 
         token_dyn::transfer(&pair.a, ctx.contract_signer(), &user, res.amount_a)?;
         token_dyn::transfer(&pair.b, ctx.contract_signer(), &user, res.amount_b)?;
@@ -408,17 +408,17 @@ impl Guest for Amm {
 
         let pool = get_pool(ctx, &pair)?;
         if token_in == pair.a {
-            pool.set_balance_a(ctx, pool.balance_a(ctx) + amount_in);
-            pool.set_balance_b(ctx, pool.balance_b(ctx) - amount_out);
+            pool.set_balance_a(pool.balance_a() + amount_in);
+            pool.set_balance_b(pool.balance_b() - amount_out);
         } else {
-            pool.set_balance_a(ctx, pool.balance_a(ctx) - amount_out);
-            pool.set_balance_b(ctx, pool.balance_b(ctx) + amount_in);
+            pool.set_balance_a(pool.balance_a() - amount_out);
+            pool.set_balance_b(pool.balance_b() + amount_in);
         }
 
         token_dyn::transfer(
             &token_in,
             ctx.signer(),
-            &ctx.model().custodian(ctx),
+            &ctx.model().custodian(),
             amount_in,
         )?;
         token_dyn::transfer(

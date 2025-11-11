@@ -51,8 +51,8 @@ Retrieves the transaction signer via `ctx.signer()` in ProcContext, enabling aut
 ## Cross-Contract Calls
 
 Invokes other contracts on the blockchain:
-- **Static**: Direct calls via imported modules (e.g., `token::transfer` in `sigil-example-contracts/shared-account`).
-- **Dynamic**: Via interfaces (e.g., `token_interface::transfer(&address, ...)` in `sigil-example-contracts/shared-account-dynamic`).
+- **Static**: Direct calls via imported modules (e.g., `token::transfer` in `example-contracts/shared-account`).
+- **Dynamic**: Via interfaces (e.g., `token_interface::transfer(&address, ...)` for dynamic contract addressing).
 
 ## Utilities
 
@@ -88,4 +88,4 @@ The `Error` enum provides error variants for result types:
 
 ## Interface Macro
 
-`interface!(name, path)`: Defines a dynamic interface for runtime contract calls, used for flexible cross-contract calling (e.g., in `sigil-example-contracts/shared-account-dynamic`).
+`interface!(name, path)`: Defines a dynamic interface for runtime contract calls, used for flexible cross-contract calling with dynamic addresses.

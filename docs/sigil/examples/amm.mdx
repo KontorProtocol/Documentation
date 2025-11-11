@@ -434,9 +434,9 @@ impl Guest for Amm {
 ```
 
 ## Testing
-Similar to the tests for other contracts, this one uses the `import!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
+Similar to the tests for other contracts, this one uses the `interface!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
 
-In addition to importing the `amm` contract, three tokens are instantiated by the `token` contract, and we import the `token-dyn` interface for dynamic cross-contract calls.
+The test publishes three contracts: the `amm` contract and two separate instances of the `token` contract to serve as the trading pair.
 
 When working with numbers in Sigil, either the `Integer` or `Decimal` types should be used. `From` instances have been implemented for many of the primitive types which is why there are many `<num>.into()`s in the test. One can also write: `Integer::from(100)`, or `Decimal::from("1.5")`, or even `let x: Decimal = 1.5.into()`, etc.
 
@@ -445,59 +445,24 @@ When working with numbers in Sigil, either the `Integer` or `Decimal` types shou
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "token-a",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+    interface!(name = "amm");
+    interface!(name = "token_a", path = "../token/contract/wit");
+    interface!(name = "token_b", path = "../token/contract/wit");
 
-    import!(
-        name = "token-b",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
-
-    import!(
-        name = "amm",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
-
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("amm", &contract_bytes().await?),
-                    ("token-a", &dep_contract_bytes("token").await?),
-                    ("token-b", &dep_contract_bytes("token").await?),
-                ])
-                .build(),
-        )
-        .await?;
+        let admin = runtime.identity().await?;
+        let minter = runtime.identity().await?;
 
-        let token_a = ContractAddress {
-            name: "token-a".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        let amm = runtime.publish(&admin, "amm").await?;
+        let token_a = runtime.publish(&admin, "token").await?;
+        let token_b = runtime.publish(&admin, "token").await?;
 
-        let token_b = ContractAddress {
-            name: "token-b".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        token_a::mint(runtime, &token_a, &minter, 1000.into()).await??;
+        token_b::mint(runtime, &token_b, &minter, 1000.into()).await??;
 
-        let admin = "test_admin";
-        let minter = "test_minter";
-        token_a::mint(runtime, minter, 1000.into()).await?;
-        token_b::mint(runtime, minter, 1000.into()).await?;
-
-        token_a::transfer(runtime, minter, admin, 100.into()).await??;
-        token_b::transfer(runtime, minter, admin, 500.into()).await??;
+        token_a::transfer(runtime, &token_a, &minter, &admin, 100.into()).await??;
+        token_b::transfer(runtime, &token_b, &minter, &admin, 500.into()).await??;
 
         let pair = amm::TokenPair {
             a: token_a.clone(),
@@ -505,7 +470,8 @@ mod tests {
         };
         let res = amm::create(
             runtime,
-            admin,
+            &amm,
+            &admin,
             pair.clone(),
             100.into(),
             500.into(),
@@ -514,24 +480,25 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(223.into()));
 
-        let bal_a = amm::token_balance(runtime, pair.clone(), token_a.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
         assert_eq!(bal_a, Ok(100.into()));
-        let bal_b = amm::token_balance(runtime, pair.clone(), token_b.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         assert_eq!(bal_b, Ok(500.into()));
         let k1 = bal_a.unwrap() * bal_b.unwrap();
 
-        let res = amm::quote_swap(runtime, pair.clone(), token_a.clone(), 10.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 10.into()).await?;
         assert_eq!(res, Ok(45.into()));
 
-        let res = amm::quote_swap(runtime, pair.clone(), token_a.clone(), 100.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 100.into()).await?;
         assert_eq!(res, Ok(250.into()));
 
-        let res = amm::quote_swap(runtime, pair.clone(), token_a.clone(), 1000.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 1000.into()).await?;
         assert_eq!(res, Ok(454.into()));
 
         let res = amm::swap(
             runtime,
-            minter,
+            &amm,
+            &minter,
             pair.clone(),
             token_a.clone(),
             10.into(),
@@ -542,7 +509,8 @@ mod tests {
 
         let res = amm::swap(
             runtime,
-            minter,
+            &amm,
+            &minter,
             pair.clone(),
             token_a.clone(),
             10.into(),
@@ -551,16 +519,17 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(45.into()));
 
-        let bal_a = amm::token_balance(runtime, pair.clone(), token_a.clone()).await?;
-        let bal_b = amm::token_balance(runtime, pair.clone(), token_b.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         let k2 = bal_a.unwrap() * bal_b.unwrap();
         assert!(k2 >= k1);
 
-        let res = amm::quote_swap(runtime, pair.clone(), token_b.clone(), 45.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_b.clone(), 45.into()).await?;
         assert_eq!(res, Ok(9.into()));
         let res = amm::swap(
             runtime,
-            minter,
+            &amm,
+            &minter,
             pair.clone(),
             token_b.clone(),
             45.into(),
@@ -569,8 +538,8 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(9.into()));
 
-        let bal_a = amm::token_balance(runtime, pair.clone(), token_a.clone()).await?;
-        let bal_b = amm::token_balance(runtime, pair.clone(), token_b.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         let k3 = bal_a.unwrap() * bal_b.unwrap();
         assert!(k3 >= k2);
 

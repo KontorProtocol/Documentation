@@ -9,20 +9,20 @@ Sigil contracts are tested using the `testlib` crate, which provides a test runt
 ### Test File Structure
 
 ```rust
-use testlib::*;  // Imports Runtime, Result, Error, etc.
+use testlib::*;
 
-// Import contract interface
-interface!(name = "token", path = "../example-contracts/token/wit");
+// Import contract interface (path relative to test directory)
+interface!(name = "token", path = "contract/wit");
 
-// Test function with #[runtime] attribute
-#[runtime(contracts_dir = "../../example-contracts")]
+// Test function with #[testlib::test] attribute
+#[testlib::test]
 async fn test_token_contract() -> Result<()> {
     // 'runtime' is injected automatically
     let signer = runtime.identity().await?;
     let token = runtime.publish(&signer, "token").await?;
 
-    // Test calls
-    token::mint(runtime, &token, &signer, 100.into()).await?;
+    // Test calls (note the double ?? for Result<Result<T, Error>>)
+    token::mint(runtime, &token, &signer, 100.into()).await??;
 
     let balance = token::balance(runtime, &token, &signer).await?;
     assert_eq!(balance, Some(100.into()));
@@ -31,25 +31,24 @@ async fn test_token_contract() -> Result<()> {
 }
 ```
 
-### The #[runtime] Attribute
+### The #[testlib::test] Attribute
 
 **Syntax:**
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn my_test() -> Result<()> { ... }
 
-#[runtime(contracts_dir = "../../example-contracts", mode = "regtest")]
+#[testlib::test(mode = "regtest")]
 async fn my_integration_test() -> Result<()> { ... }
 ```
 
 **Parameters:**
-- `contracts_dir` - Path to compiled contracts (with `.wasm.br` files)
 - `mode` - Optional: `"regtest"` for integration tests against real blockchain
 
 **What it provides:**
 - `runtime: &mut Runtime` - Automatically injected variable
 - Test isolation (each test gets fresh state)
-- Contract loading and execution
+- Automatic contract loading from compiled bytecode
 
 ## Runtime API
 
@@ -74,7 +73,7 @@ impl Runtime {
 Each test can create multiple users:
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_multi_user() -> Result<()> {
     let alice = runtime.identity().await?;
     let bob = runtime.identity().await?;
@@ -92,7 +91,7 @@ async fn test_multi_user() -> Result<()> {
 ## Publishing Contracts
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_publish() -> Result<()> {
     let deployer = runtime.identity().await?;
 
@@ -151,7 +150,7 @@ match result {
 ### Testing View Functions
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_balance_query() -> Result<()> {
     let alice = runtime.identity().await?;
     let token = runtime.publish(&alice, "token").await?;
@@ -174,7 +173,7 @@ async fn test_balance_query() -> Result<()> {
 ### Expected Business Logic Errors
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_insufficient_funds() -> Result<()> {
     let alice = runtime.identity().await?;
     let bob = runtime.identity().await?;
@@ -204,7 +203,7 @@ assert!(result.is_err_and(|e|
 ## Testing Cross-Contract Calls
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_fib_with_arith() -> Result<()> {
     let signer = runtime.identity().await?;
 
@@ -225,7 +224,7 @@ async fn test_fib_with_arith() -> Result<()> {
 The runtime prevents re-entrancy automatically:
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_reentrancy() -> Result<()> {
     let signer = runtime.identity().await?;
     let fib = runtime.publish(&signer, "fib").await?;
@@ -288,7 +287,7 @@ async fn run_test_token_contract(runtime: &mut Runtime) -> Result<()> {
     Ok(())
 }
 
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_token_contract() -> Result<()> {
     run_test_token_contract(runtime).await
 }
@@ -299,7 +298,7 @@ async fn test_token_contract() -> Result<()> {
 Tests can run against a real Bitcoin regtest blockchain:
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts", mode = "regtest")]
+#[testlib::test(mode = "regtest")]
 async fn test_token_on_regtest() -> Result<()> {
     // Enable logging
     logging::setup();
@@ -339,26 +338,27 @@ cargo test test_token_contract_regtest --release
 
 ## Test Organization
 
-**Typical test file structure:**
+**Test directory structure:**
 ```
 test/
 ├── Cargo.toml
 ├── build.rs         # Compiles contract to WASM
-└── tests/
-    ├── basic.rs     # Basic functionality tests
-    ├── errors.rs    # Error case tests
-    └── integration.rs  # Cross-contract tests
+└── src/
+    └── lib.rs       # Test module
 ```
 
-**Each test file:**
+**Test file (test/src/lib.rs):**
 ```rust
-use testlib::*;
+#[cfg(test)]
+mod tests {
+    use testlib::*;
 
-interface!(name = "my_contract", path = "../contract/wit");
+    interface!(name = "my_contract", path = "contract/wit");
 
-#[runtime(contracts_dir = "..")]
-async fn test_something() -> Result<()> {
-    // Test code
+    #[testlib::test]
+    async fn test_something() -> Result<()> {
+        // Test code
+    }
 }
 ```
 
@@ -376,7 +376,7 @@ assert!(result.is_err());
 
 **2. Use descriptive test names**
 ```rust
-#[runtime(contracts_dir = "..")]
+#[testlib::test]
 async fn test_transfer_fails_with_insufficient_funds() -> Result<()> { ... }
 ```
 
@@ -389,7 +389,7 @@ async fn setup_token_with_balance(runtime: &mut Runtime, amount: Integer) -> Res
     Ok((signer, token))
 }
 
-#[runtime(contracts_dir = "..")]
+#[testlib::test]
 async fn test_with_setup() -> Result<()> {
     let (alice, token) = setup_token_with_balance(runtime, 1000.into()).await?;
     // ... test logic

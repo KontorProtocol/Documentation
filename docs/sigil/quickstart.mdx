@@ -137,47 +137,49 @@ chmod +x build.sh
 
 ### Step 5: Write Tests
 
-{/* TODO: Finalize test setup instructions - tests currently run in core/indexer package, not separate workspace */}
-
-Create a test file following the pattern from existing examples:
+Create `test/src/lib.rs`:
 
 ```rust
-use testlib::*;
+#[cfg(test)]
+mod tests {
+    use testlib::*;
 
-interface!(name = "counter", path = "../my-counter/wit");
+    interface!(name = "counter", path = "contract/wit");
 
-#[runtime(contracts_dir = "../my-counter")]
-async fn test_counter() -> Result<()> {
-    // Create a test user
-    let alice = runtime.identity().await?;
-    
-    // Deploy the counter contract
-    let counter = runtime.publish(&alice, "counter").await?;
-    
-    // Initial value should be 0
-    let value = counter::get(runtime, &counter).await?;
-    assert_eq!(value, 0);
-    
-    // Increment
-    counter::increment(runtime, &counter, &alice).await?;
-    
-    // Value should now be 1
-    let value = counter::get(runtime, &counter).await?;
-    assert_eq!(value, 1);
-    
-    // Increment again
-    counter::increment(runtime, &counter, &alice).await?;
-    
-    let value = counter::get(runtime, &counter).await?;
-    assert_eq!(value, 2);
-    
-    Ok(())
+    #[testlib::test]
+    async fn test_counter() -> Result<()> {
+        // Create a test user
+        let alice = runtime.identity().await?;
+        
+        // Deploy the counter contract
+        let counter = runtime.publish(&alice, "counter").await?;
+        
+        // Initial value should be 0
+        let value = counter::get(runtime, &counter).await?;
+        assert_eq!(value, 0);
+        
+        // Increment
+        counter::increment(runtime, &counter, &alice).await?;
+        
+        // Value should now be 1
+        let value = counter::get(runtime, &counter).await?;
+        assert_eq!(value, 1);
+        
+        // Increment again
+        counter::increment(runtime, &counter, &alice).await?;
+        
+        let value = counter::get(runtime, &counter).await?;
+        assert_eq!(value, 2);
+        
+        Ok(())
+    }
 }
 ```
 
 **Run tests:**
 ```bash
-cargo test --release
+cd test
+cargo test
 ```
 
 ## Common First-Time Errors

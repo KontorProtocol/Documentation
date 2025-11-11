@@ -83,7 +83,6 @@
         "docs/sigil/examples/hello-world",
         "docs/sigil/examples/token",
         "docs/sigil/examples/shared-account",
-        "docs/sigil/examples/shared-account-dynamic",
         "docs/sigil/examples/proxy",
         "docs/sigil/examples/amm",
         "docs/sigil/examples/pool"

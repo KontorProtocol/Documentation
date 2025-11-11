@@ -50,8 +50,8 @@
         "docs/introduction/core-concepts",
         "docs/introduction/architecture",
         "docs/introduction/security"
-        // Future: "docs/introduction/use-cases" - What can you build with Kontor?
       ]
+      // Future: "docs/introduction/use-cases"
     },
     {
       "group": "Basics",
@@ -71,10 +71,10 @@
         "docs/sigil/guides/error-handling",
         "docs/sigil/guides/numbers",
         "docs/sigil/guides/testing"
-        // Future: "docs/sigil/guides/gas-optimization" - Optimizing gas costs
-        // Future: "docs/sigil/guides/security" - Security patterns and CEI
-        // Future: "docs/sigil/guides/upgrading" - Contract upgrades and versioning
       ]
+      // Future: "docs/sigil/guides/gas-optimization"
+      // Future: "docs/sigil/guides/security"
+      // Future: "docs/sigil/guides/upgrading"
     },
     {
       "group": "Examples",
@@ -113,17 +113,17 @@
       "pages": [
         "docs/storage/introduction",
         "docs/resources/storage-protocol",
-        // Future: "docs/storage/quickstart" - Tutorial: Store your first file
         "docs/storage/file-agreements",
         "docs/storage/challenge-response",
         "docs/storage/node-operations",
         "docs/storage/cryptographic-system",
         "docs/storage/sponsorship-markets",
         "docs/storage/storage-security"
-        // Future: "docs/storage/retrieval" - Guide: Retrieving files from storage nodes
-        // Future: "docs/storage/running-nodes" - Guide: Operating a storage node
-        // Future: "docs/storage/node-profitability" - Economics: Profitability analysis with examples
       ]
+      // Future: "docs/storage/quickstart"
+      // Future: "docs/storage/retrieval"
+      // Future: "docs/storage/running-nodes"
+      // Future: "docs/storage/node-profitability"
     },
     {
       "group": "Resources",

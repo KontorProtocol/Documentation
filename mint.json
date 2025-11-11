@@ -32,6 +32,10 @@
     {
       "name": "Economics",
       "url": "docs/economics"
+    },
+    {
+      "name": "Storage",
+      "url": "docs/storage"
     }
   ],
   "anchors": [],
@@ -109,6 +113,19 @@
         "docs/economics/network-health",
         "docs/economics/economic-security",
         "docs/economics/long-term-dynamics"
+      ]
+    },
+    {
+      "group": "Storage",
+      "pages": [
+        "docs/storage/introduction",
+        "docs/storage/resources/storage-protocol",
+        "docs/storage/file-agreements",
+        "docs/storage/challenge-response",
+        "docs/storage/node-operations",
+        "docs/storage/cryptographic-system",
+        "docs/storage/sponsorship-markets",
+        "docs/storage/storage-security"
       ]
     }
   ],

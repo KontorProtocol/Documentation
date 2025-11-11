@@ -51,7 +51,6 @@
         "docs/introduction/architecture",
         "docs/introduction/security"
       ]
-      // Future: "docs/introduction/use-cases"
     },
     {
       "group": "Basics",
@@ -72,9 +71,6 @@
         "docs/sigil/guides/numbers",
         "docs/sigil/guides/testing"
       ]
-      // Future: "docs/sigil/guides/gas-optimization"
-      // Future: "docs/sigil/guides/security"
-      // Future: "docs/sigil/guides/upgrading"
     },
     {
       "group": "Examples",
@@ -120,10 +116,6 @@
         "docs/storage/sponsorship-markets",
         "docs/storage/storage-security"
       ]
-      // Future: "docs/storage/quickstart"
-      // Future: "docs/storage/retrieval"
-      // Future: "docs/storage/running-nodes"
-      // Future: "docs/storage/node-profitability"
     },
     {
       "group": "Resources",

@@ -10,47 +10,56 @@ title: 2. Token
 This example demonstrates persistent storage, user balances, transactions, and error handling for a fungible token.
 
 ## WIT Interface
-Imports types:
-- `signer`: Transaction sender (identity)
-- `error`: Failure handling
-- `integer`: Amounts
 
-and exports functions:
-- `init`: Initializes the contract
-- `mint`: Adds tokens to the signer’s balance
-- `transfer`: Moves tokens, potentially returning an error
-- `balance`: Queries a balance
+Exports functions for a fungible token with minting, burning, transfers, and balance queries:
 
 ```wit
-package kontor:contract;
+package root:component;
 
-world contract {
+world root {
     include kontor:built-in/built-in;
-    use kontor:built-in/context.{view-context, proc-context, signer};
+    use kontor:built-in/context.{core-context, view-context, proc-context, signer};
     use kontor:built-in/error.{error};
-    use kontor:built-in/numbers.{integer, decimal};
+    use kontor:built-in/numbers.{integer};
+
+    record balance {
+        key: string,
+        value: integer,
+    }
 
     export init: func(ctx: borrow<proc-context>);
 
-    export mint: func(ctx: borrow<proc-context>, n: integer);
+    export mint: func(ctx: borrow<proc-context>, n: integer) -> result<_, error>;
+    export burn: func(ctx: borrow<proc-context>, n: integer) -> result<_, error>;
     export transfer: func(ctx: borrow<proc-context>, to: string, n: integer) -> result<_, error>;
     export balance: func(ctx: borrow<view-context>, acc: string) -> option<integer>;
+    export balances: func(ctx: borrow<view-context>) -> list<balance>;
+    export total-supply: func(ctx: borrow<view-context>) -> integer;
 }
 ```
 
 ## Rust Implementation
-- `TokenStorage` represents the contract’s persistent storage. The `StorageRoot` derive macro enables storage capabilities for the type and marks it as the "root" storage type. The root storage is accessible via a generated function: `storage`, which provides an ORM-like interface to contract functions. Every contract with storage must have exactly one type that derives `StorageRoot`.
-- `Map` is a storage-enabled mapping type that can hold values of any type that also derive `Storage`. In this case, `Integer` is provided by `stdlib` and is storage-enabled.
-- The `ctx` parameter must be passed to every operation that performs a database call. These functions take an `impl ReadContext` or an `impl WriteContext`, depending on their behavior. `ProcContext` implements both, while `ViewContext` implements only `ReadContext`. This ensures state mutations occur only as the result of a transaction while allowing the same functions and methods to be used across procedures and views.
+
+The token contract uses a Map to store account balances, with helper functions for validation and a total supply tracker:
 
 ```rust
 use stdlib::*;
 
 contract!(name = "token");
 
+const BURNER: &str = "burn";
+
 #[derive(Clone, Default, StorageRoot)]
 struct TokenStorage {
     pub ledger: Map<String, Integer>,
+    pub total_supply: Integer,
+}
+
+fn assert_gt_zero(n: Integer) -> Result<(), Error> {
+    if n <= 0.into() {
+        return Err(Error::Message("Amount must be positive".to_string()));
+    }
+    Ok(())
 }
 
 impl Guest for Token {
@@ -58,89 +67,134 @@ impl Guest for Token {
         TokenStorage::default().init(ctx);
     }
 
-    fn mint(ctx: &ProcContext, n: Integer) {
+    fn mint(ctx: &ProcContext, n: Integer) -> Result<(), Error> {
+        assert_gt_zero(n)?;
         let to = ctx.signer().to_string();
-        let ledger = storage(ctx).ledger();
+        let ledger = ctx.model().ledger();
+        let balance = ledger.get(&to).unwrap_or_default();
+        ledger.set(to, balance.add(n)?);
+        ctx.model().try_update_total_supply(|t| t.add(n))?;
+        Ok(())
+    }
 
-        let balance = ledger.get(ctx, &to).unwrap_or_default();
-        ledger.set(ctx, to, balance + n);
+    fn burn(ctx: &ProcContext, n: Integer) -> Result<(), Error> {
+        Self::transfer(ctx, BURNER.to_string(), n)?;
+        ctx.model().try_update_total_supply(|t| t.sub(n))?;
+        Ok(())
     }
 
     fn transfer(ctx: &ProcContext, to: String, n: Integer) -> Result<(), Error> {
+        assert_gt_zero(n)?;
         let from = ctx.signer().to_string();
-        let ledger = storage(ctx).ledger();
+        let ledger = ctx.model().ledger();
 
-        let from_balance = ledger.get(ctx, &from).unwrap_or_default();
-        let to_balance = ledger.get(ctx, &to).unwrap_or_default();
+        let from_balance = ledger.get(&from).unwrap_or_default();
+        let to_balance = ledger.get(&to).unwrap_or_default();
 
         if from_balance < n {
-            return Err(Error::new("insufficient funds"));
+            return Err(Error::Message("insufficient funds".to_string()));
         }
 
-        ledger.set(ctx, from, from_balance - n);
-        ledger.set(ctx, to, to_balance + n);
+        ledger.set(from, from_balance.sub(n)?);
+        ledger.set(to, to_balance.add(n)?);
         Ok(())
     }
 
     fn balance(ctx: &ViewContext, acc: String) -> Option<Integer> {
-        storage(ctx).ledger().get(ctx, acc)
+        ctx.model().ledger().get(acc)
+    }
+
+    fn balances(ctx: &ViewContext) -> Vec<Balance> {
+        ctx.model()
+            .ledger()
+            .keys()
+            .filter_map(|k| {
+                if [BURNER.to_string()].contains(&k) {
+                    None
+                } else {
+                    Some(Balance {
+                        value: ctx.model().ledger().get(&k).unwrap_or_default(),
+                        key: k,
+                    })
+                }
+            })
+            .collect()
+    }
+
+    fn total_supply(ctx: &ViewContext) -> Integer {
+        ctx.model().total_supply()
     }
 }
 ```
 
-## Testing
-Similar to the test in `hello-world`, this one uses the `import!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
+**Key points:**
+- Storage accessed via `ctx.model()`, not a separate `storage()` function
+- Map operations: `ledger.get(&key)` and `ledger.set(key, value)` - no extra ctx parameter
+- Errors use `Error::Message(...to_string())` variant
+- Uses checked arithmetic (`.add(n)?`, `.sub(n)?`) for overflow safety
+- Helper validation function (`assert_gt_zero`)
+- Total supply tracking with `try_update_*` closures
 
-When working with numbers in Sigil, either the `Integer` or `Decimal` types should be used. `From` instances have been implemented for many of the primitive types which is why there are many `<num>.into()`s in the test. One can also write: `Integer::from(100)`, or `Decimal::from("1.5")`, or even `let x: Decimal = 1.5.into()`, etc.
+## Testing
+
+The test demonstrates minting, transferring, and error handling with proper use of the double `??` operator for functions returning `Result`:
 
 ```rust
 #[cfg(test)]
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "token",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "token", path = "contract/wit");
 
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[("token", &contract_bytes().await?)])
-                .build(),
-        )
-        .await?;
+        let minter = runtime.identity().await?;
+        let holder = runtime.identity().await?;
+        let token = runtime.publish(&minter, "token").await?;
 
-        let minter = "test_minter";
-        let holder = "test_holder";
-        token::mint(&runtime, minter, 900.into()).await?;
-        token::mint(&runtime, minter, 100.into()).await?;
+        token::mint(runtime, &token, &minter, 900.into()).await??;
+        token::mint(runtime, &token, &minter, 100.into()).await??;
 
-        let result = token::balance(&runtime, minter).await?;
+        let result = token::balance(runtime, &token, &minter).await?;
         assert_eq!(result, Some(1000.into()));
 
-        let result = token::transfer(&runtime, holder, minter, 123.into()).await?;
+        // Test insufficient funds error
+        let result = token::transfer(runtime, &token, &holder, &minter, 123.into()).await?;
         assert_eq!(
             result,
             Err(Error::Message("insufficient funds".to_string()))
         );
 
-        token::transfer(&runtime, minter, holder, 40.into()).await??;
-        token::transfer(&runtime, minter, holder, 2.into()).await??;
+        token::transfer(runtime, &token, &minter, &holder, 40.into()).await??;
+        token::transfer(runtime, &token, &minter, &holder, 2.into()).await??;
 
-        let result = token::balance(&runtime, holder).await?;
+        let result = token::balance(runtime, &token, &holder).await?;
         assert_eq!(result, Some(42.into()));
 
-        let result = token::balance(&runtime, minter).await?;
+        let result = token::balance(runtime, &token, &minter).await?;
         assert_eq!(result, Some(958.into()));
 
-        let result = token::balance(&runtime, "foo").await?;
+        // Test non-existent account
+        let result = token::balance(runtime, &token, "foo").await?;
         assert_eq!(result, None);
+
+        // Test balances list and total supply
+        let balances = token::balances(runtime, &token).await?;
+        assert_eq!(balances.len(), 2);
+        let total = balances
+            .iter()
+            .fold(Integer::from(0), |acc, x| acc + x.value);
+        assert_eq!(total, token::total_supply(runtime, &token).await?);
 
         Ok(())
     }
 }
 ```
+
+**Key points:**
+- Uses `interface!` to generate bindings, not `import!`
+- `#[testlib::test]` auto-injects `runtime` variable
+- `runtime.identity()` creates test users
+- `runtime.publish()` deploys the contract
+- Functions returning `Result` use `??` to unwrap both the runtime Result and contract Result
+- Integers created with `.into()` or `Integer::from()`

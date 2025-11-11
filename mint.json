@@ -96,7 +96,6 @@
       "group": "Economics",
       "pages": [
         "docs/economics/introduction",
-        "docs/resources/economic-model",
         "docs/economics/perpetual",
         "docs/economics/node-economics",
         "docs/economics/network-health",
@@ -108,7 +107,6 @@
       "group": "File Storage",
       "pages": [
         "docs/storage/introduction",
-        "docs/resources/storage-protocol",
         "docs/storage/file-agreements",
         "docs/storage/challenge-response",
         "docs/storage/node-operations",
@@ -120,13 +118,13 @@
     {
       "group": "Resources",
       "pages": [
-        "docs/resources/faq",
         "docs/resources/whitepaper",
         "docs/resources/economic-model",
         "docs/resources/storage-protocol",
         "docs/resources/alkanes",
         "docs/resources/brc2-0",
-        "docs/resources/move"
+        "docs/resources/move",
+        "docs/resources/faq"
       ]
     }
   ],

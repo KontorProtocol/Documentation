@@ -2,72 +2,123 @@
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "shared-account",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "token", path = "../token/contract/wit");
 
-    import!(
-        name = "token",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+    interface!(name = "shared-account");
 
-    #[tokio::test]
-    async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("shared-account", &contract_bytes().await?),
-                    ("token", &dep_contract_bytes("token").await?),
-                ])
-                .build(),
+    async fn run_test_shared_account_contract(runtime: &mut Runtime) -> Result<()> {
+        let alice = runtime.identity().await?;
+        let bob = runtime.identity().await?;
+        let claire = runtime.identity().await?;
+        let dara = runtime.identity().await?;
+
+        let token = runtime.publish(&alice, "token").await?;
+        let shared_account = runtime.publish(&alice, "shared-account").await?;
+
+        token::mint(runtime, &token, &alice, 100.into()).await??;
+
+        let account_id = shared_account::open(
+            runtime,
+            &shared_account,
+            &alice,
+            token.clone(),
+            50.into(),
+            vec![&bob, &dara],
         )
-        .await?;
+        .await??;
 
-        let alice = "alice";
-        let bob = "bob";
-        let claire = "claire";
-        let dara = "dara";
-
-        token::mint(&runtime, alice, 100.into()).await?;
-
-        let account_id =
-            shared_account::open(&runtime, alice, 50.into(), vec![bob, dara]).await??;
-
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        shared_account::deposit(&runtime, alice, &account_id, 25.into()).await??;
+        shared_account::deposit(
+            runtime,
+            &shared_account,
+            &alice,
+            token.clone(),
+            &account_id,
+            25.into(),
+        )
+        .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(75.into()));
 
-        shared_account::withdraw(&runtime, bob, &account_id, 25.into()).await??;
+        shared_account::withdraw(
+            runtime,
+            &shared_account,
+            &bob,
+            token.clone(),
+            &account_id,
+            25.into(),
+        )
+        .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        shared_account::withdraw(&runtime, alice, &account_id, 50.into()).await??;
+        shared_account::withdraw(
+            runtime,
+            &shared_account,
+            &alice,
+            token.clone(),
+            &account_id,
+            50.into(),
+        )
+        .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(0.into()));
 
-        let result = shared_account::withdraw(&runtime, bob, &account_id, 1.into()).await?;
-        assert_eq!(result, Err(Error::new("insufficient balance")));
-
-        let result = shared_account::withdraw(&runtime, claire, &account_id, 1.into()).await?;
-        assert_eq!(result, Err(Error::new("unauthorized")));
-
-        let result = shared_account::tenants(&runtime, &account_id).await?;
+        let result = shared_account::withdraw(
+            runtime,
+            &shared_account,
+            &bob,
+            token.clone(),
+            &account_id,
+            1.into(),
+        )
+        .await?;
         assert_eq!(
             result,
-            Some(vec![alice.to_string(), bob.to_string(), dara.to_string()])
+            Err(Error::Message("insufficient balance".to_string()))
         );
 
+        let result = shared_account::withdraw(
+            runtime,
+            &shared_account,
+            &claire,
+            token.clone(),
+            &account_id,
+            1.into(),
+        )
+        .await?;
+        assert_eq!(result, Err(Error::Message("unauthorized".to_string())));
+
+        let result =
+            shared_account::token_balance(runtime, &shared_account, token.clone(), &alice).await?;
+        assert_eq!(result, Some(75.into()));
+
+        let result = token::balance(runtime, &token, &bob).await?;
+        assert_eq!(result, Some(25.into()));
+
+        let result = shared_account::tenants(runtime, &shared_account, &account_id)
+            .await?
+            .unwrap();
+        assert_eq!(result.iter().len(), 3);
+        assert!(result.contains(&alice.to_string()));
+        assert!(result.contains(&dara.to_string()));
+        assert!(result.contains(&bob.to_string()));
+
         Ok(())
+    }
+
+    #[testlib::test]
+    async fn test_shared_account_contract() -> Result<()> {
+        run_test_shared_account_contract(runtime).await
+    }
+
+    #[testlib::test(mode = "regtest")]
+    async fn test_shared_account_contract_regtest() -> Result<()> {
+        run_test_shared_account_contract(runtime).await
     }
 }

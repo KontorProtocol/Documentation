@@ -9,7 +9,6 @@ doctest = false
 [dependencies]
 testlib = { workspace = true }
 stdlib = { workspace = true }
-tokio = { workspace = true }
 
 token-test = { path = "../../token/test" }
-shared-account-dynamic-test = { path = "../../shared-account-dynamic/test" }
+shared-account-test = { path = "../../shared-account/test" }

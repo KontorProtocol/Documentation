@@ -2,25 +2,14 @@
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "hello-world",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "hello-world");
 
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[("hello-world", &contract_bytes().await?)])
-                .build(),
-        )
-        .await?;
-
-        let result = hello_world::hello_world(&runtime).await?;
+        let alice = runtime.identity().await?;
+        let hello_world = runtime.publish(&alice, "hello-world").await?;
+        let result = hello_world::hello_world(runtime, &hello_world).await?;
         assert_eq!(result, "Hello, World!");
-
         Ok(())
     }
 }

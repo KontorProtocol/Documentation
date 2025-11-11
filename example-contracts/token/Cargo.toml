@@ -10,8 +10,5 @@ strip = true
 panic = "abort"
 
 [workspace.dependencies]
-testlib = { path = "../../Kontor/core/testlib" }
-stdlib = { path = "../../Kontor/core/stdlib" }
-
-wit-bindgen = { version = "=0.46.0" }
-tokio = { version = "1", features = ["full"] }
+testlib = { path = "../../../Kontor/core/testlib" }
+stdlib = { path = "../../../Kontor/core/stdlib" }

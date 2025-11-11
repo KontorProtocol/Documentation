@@ -2,158 +2,119 @@
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "proxy",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
+    interface!(name = "proxy");
+
+    interface!(name = "token", path = "../token/contract/wit");
+
+    interface!(
+        name = "shared-account",
+        path = "../shared-account/contract/wit"
     );
 
-    import!(
-        mod_name = "shared_account_dynamic_proxied",
-        name = "proxy",
-        height = 0,
-        tx_index = 0,
-        path = "../shared-account-dynamic/contract/wit",
-    );
+    async fn run_test_shared_account_contract(runtime: &mut Runtime) -> Result<()> {
+        let alice = runtime.identity().await?;
+        let bob = runtime.identity().await?;
+        let claire = runtime.identity().await?;
+        let dara = runtime.identity().await?;
 
-    import!(
-        name = "token",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+        let proxy = runtime.publish(&alice, "proxy").await?;
+        let token = runtime.publish(&alice, "token").await?;
+        let shared_account = runtime.publish(&alice, "shared-account").await?;
 
-    #[tokio::test]
-    async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("token", &dep_contract_bytes("token").await?),
-                    (
-                        "shared-account-dynamic",
-                        &dep_contract_bytes("shared-account-dynamic").await?,
-                    ),
-                    ("proxy", &contract_bytes().await?),
-                ])
-                .build(),
-        )
-        .await?;
+        proxy::set_contract_address(runtime, &proxy, &alice, shared_account.clone()).await?;
+        let result = proxy::get_contract_address(runtime, &proxy).await?;
+        assert_eq!(result, Some(shared_account.clone()));
 
-        let alice = "alice";
-        let bob = "bob";
-        let claire = "claire";
-        let dara = "dara";
+        token::mint(runtime, &token, &alice, 100.into()).await??;
 
-        let result = proxy::get_contract_address(&runtime).await?;
-        assert_eq!(result, None);
-
-        let address = ContractAddress {
-            name: "shared-account-dynamic".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
-        proxy::set_contract_address(&runtime, alice, address.clone()).await?;
-
-        let result = proxy::get_contract_address(&runtime).await?;
-        assert_eq!(result, Some(address));
-
-        token::mint(&runtime, alice, 100.into()).await?;
-
-        let token_address = ContractAddress {
-            name: "token".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
-
-        let account_id = shared_account_dynamic_proxied::open(
-            &runtime,
-            alice,
-            token_address.clone(),
+        let account_id = shared_account::open(
+            runtime,
+            &proxy,
+            &alice,
+            token.clone(),
             50.into(),
-            vec![bob, dara],
+            vec![&bob, &dara],
         )
         .await??;
 
-        let result = shared_account_dynamic_proxied::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &proxy, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        let result = shared_account_dynamic_proxied::withdraw(
-            &runtime,
-            alice,
-            ContractAddress {
-                name: "other-token".to_string(),
-                height: 0,
-                tx_index: 0,
-            },
-            &account_id,
-            50.into(),
-        )
-        .await?;
-        assert_eq!(result, Err(Error::new("unauthorized")));
-
-        shared_account_dynamic_proxied::deposit(
-            &runtime,
-            alice,
-            token_address.clone(),
+        shared_account::deposit(
+            runtime,
+            &proxy,
+            &alice,
+            token.clone(),
             &account_id,
             25.into(),
         )
         .await??;
 
-        let result = shared_account_dynamic_proxied::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &proxy, &account_id).await?;
         assert_eq!(result, Some(75.into()));
 
-        shared_account_dynamic_proxied::withdraw(
-            &runtime,
-            bob,
-            token_address.clone(),
-            &account_id,
-            25.into(),
-        )
-        .await??;
+        shared_account::withdraw(runtime, &proxy, &bob, token.clone(), &account_id, 25.into())
+            .await??;
 
-        let result = shared_account_dynamic_proxied::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &proxy, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        shared_account_dynamic_proxied::withdraw(
-            &runtime,
-            alice,
-            token_address.clone(),
+        shared_account::withdraw(
+            runtime,
+            &proxy,
+            &alice,
+            token.clone(),
             &account_id,
             50.into(),
         )
         .await??;
 
-        let result = shared_account_dynamic_proxied::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &proxy, &account_id).await?;
         assert_eq!(result, Some(0.into()));
 
-        let result = shared_account_dynamic_proxied::withdraw(
-            &runtime,
-            bob,
-            token_address.clone(),
-            &account_id,
-            1.into(),
-        )
-        .await?;
-        assert_eq!(result, Err(Error::new("insufficient balance")));
-
-        let result = shared_account_dynamic_proxied::withdraw(
-            &runtime,
-            claire,
-            token_address.clone(),
-            &account_id,
-            1.into(),
-        )
-        .await?;
-        assert_eq!(result, Err(Error::new("unauthorized")));
-
-        let result = shared_account_dynamic_proxied::tenants(&runtime, &account_id).await?;
+        let result =
+            shared_account::withdraw(runtime, &proxy, &bob, token.clone(), &account_id, 1.into())
+                .await?;
         assert_eq!(
             result,
-            Some(vec![alice.to_string(), bob.to_string(), dara.to_string()])
+            Err(Error::Message("insufficient balance".to_string()))
         );
 
+        let result = shared_account::withdraw(
+            runtime,
+            &proxy,
+            &claire,
+            token.clone(),
+            &account_id,
+            1.into(),
+        )
+        .await?;
+        assert_eq!(result, Err(Error::Message("unauthorized".to_string())));
+
+        let result = shared_account::token_balance(runtime, &proxy, token.clone(), &alice).await?;
+        assert_eq!(result, Some(75.into()));
+
+        let result = token::balance(runtime, &token, &bob).await?;
+        assert_eq!(result, Some(25.into()));
+
+        let result = shared_account::tenants(runtime, &proxy, &account_id)
+            .await?
+            .unwrap();
+        assert_eq!(result.iter().len(), 3);
+        assert!(result.contains(&alice.to_string()));
+        assert!(result.contains(&dara.to_string()));
+        assert!(result.contains(&bob.to_string()));
+
         Ok(())
+    }
+
+    #[testlib::test]
+    async fn test_shared_account_contract() -> Result<()> {
+        run_test_shared_account_contract(runtime).await
+    }
+
+    #[testlib::test(mode = "regtest")]
+    async fn test_shared_account_contract_regtest() -> Result<()> {
+        run_test_shared_account_contract(runtime).await
     }
 }

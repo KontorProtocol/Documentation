@@ -2,48 +2,54 @@
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "token",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "token", path = "contract/wit");
 
-    #[tokio::test]
-    async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[("token", &contract_bytes().await?)])
-                .build(),
-        )
-        .await?;
+    async fn run_test_contract(runtime: &mut Runtime) -> Result<()> {
+        let minter = runtime.identity().await?;
+        let holder = runtime.identity().await?;
+        let token = runtime.publish(&minter, "token").await?;
 
-        let minter = "test_minter";
-        let holder = "test_holder";
-        token::mint(&runtime, minter, 900.into()).await?;
-        token::mint(&runtime, minter, 100.into()).await?;
+        token::mint(runtime, &token, &minter, 900.into()).await??;
+        token::mint(runtime, &token, &minter, 100.into()).await??;
 
-        let result = token::balance(&runtime, minter).await?;
+        let result = token::balance(runtime, &token, &minter).await?;
         assert_eq!(result, Some(1000.into()));
 
-        let result = token::transfer(&runtime, holder, minter, 123.into()).await?;
+        let result = token::transfer(runtime, &token, &holder, &minter, 123.into()).await?;
         assert_eq!(
             result,
             Err(Error::Message("insufficient funds".to_string()))
         );
 
-        token::transfer(&runtime, minter, holder, 40.into()).await??;
-        token::transfer(&runtime, minter, holder, 2.into()).await??;
+        token::transfer(runtime, &token, &minter, &holder, 40.into()).await??;
+        token::transfer(runtime, &token, &minter, &holder, 2.into()).await??;
 
-        let result = token::balance(&runtime, holder).await?;
+        let result = token::balance(runtime, &token, &holder).await?;
         assert_eq!(result, Some(42.into()));
 
-        let result = token::balance(&runtime, minter).await?;
+        let result = token::balance(runtime, &token, &minter).await?;
         assert_eq!(result, Some(958.into()));
 
-        let result = token::balance(&runtime, "foo").await?;
+        let result = token::balance(runtime, &token, "foo").await?;
         assert_eq!(result, None);
 
+        let balances = token::balances(runtime, &token).await?;
+        assert_eq!(balances.len(), 2);
+        let total = balances
+            .iter()
+            .fold(Integer::from(0), |acc, x| acc + x.value);
+        assert_eq!(total, token::total_supply(runtime, &token).await?);
+
         Ok(())
+    }
+
+    #[testlib::test]
+    async fn test_contract() -> Result<()> {
+        run_test_contract(runtime).await
+    }
+
+    #[testlib::test(mode = "regtest")]
+    async fn test_contract_regtest() -> Result<()> {
+        run_test_contract(runtime).await
     }
 }

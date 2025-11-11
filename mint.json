@@ -57,21 +57,29 @@
       "group": "Basics",
       "pages": [
         "docs/sigil/introduction",
+        "docs/sigil/quickstart",
         "docs/sigil/architecture",
         "docs/sigil/getting-started"
-        // Future: "docs/sigil/quickstart" - Complete tutorial: deploy your first contract
       ]
     },
-    // Future group: "Guides" 
-    // - "docs/sigil/guides/contract-structure" - Anatomy of a Sigil contract
-    // - "docs/sigil/guides/storage-patterns" - Working with state
-    // - "docs/sigil/guides/cross-contract-calls" - Contract composability
-    // - "docs/sigil/guides/testing" - Unit and integration testing
-    // - "docs/sigil/guides/gas-optimization" - Optimizing gas costs
+    {
+      "group": "Guides",
+      "pages": [
+        "docs/sigil/guides/contract-structure",
+        "docs/sigil/guides/storage",
+        "docs/sigil/guides/cross-contract-calls",
+        "docs/sigil/guides/error-handling",
+        "docs/sigil/guides/numbers",
+        "docs/sigil/guides/testing"
+        // Future: "docs/sigil/guides/gas-optimization" - Optimizing gas costs
+        // Future: "docs/sigil/guides/security" - Security patterns and CEI
+        // Future: "docs/sigil/guides/upgrading" - Contract upgrades and versioning
+      ]
+    },
     {
       "group": "Examples",
       "pages": [
-        // Future: "docs/sigil/examples/index" - Examples overview and learning path
+        "docs/sigil/examples/index",
         "docs/sigil/examples/hello-world",
         "docs/sigil/examples/token",
         "docs/sigil/examples/shared-account",

@@ -1,0 +1,219 @@
+---
+sidebar_position: 4
+title: Quickstart Tutorial
+---
+
+This tutorial walks you through creating, building, and testing your first Sigil smart contract—a simple counter that demonstrates the fundamentals.
+
+## Prerequisites
+
+Ensure you have the required dependencies installed (see [Getting Started](/docs/sigil/getting-started) for installation instructions):
+- Rust with `wasm32-unknown-unknown` target
+- `binaryen` (provides `wasm-opt`)
+- `brotli` compression tool
+
+## Create Your Counter Contract
+
+**Project structure:**
+```
+my-counter/
+├── Cargo.toml
+├── wit/
+│   └── contract.wit
+└── src/
+    └── lib.rs
+```
+
+### Step 1: Configure Cargo.toml
+
+```toml
+[package]
+name = "counter"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wit-bindgen = "=0.47.0"
+stdlib = { path = "../core/stdlib" }
+
+[lib]
+crate-type = ["cdylib"]
+```
+
+**Key points:**
+- `crate-type = ["cdylib"]` - Builds a dynamic library for WASM
+- `wit-bindgen` version must be exactly `0.47.0`
+- `stdlib` provides Sigil macros and runtime primitives
+
+### Step 2: Define Contract Interface (WIT)
+
+Create `wit/contract.wit`:
+
+```wit
+package root:component;
+
+world root {
+  include kontor:built-in/built-in;
+  use kontor:built-in/context.{view-context, proc-context};
+
+  export init: func(ctx: borrow<proc-context>);
+  export increment: func(ctx: borrow<proc-context>);
+  export get: func(ctx: borrow<view-context>) -> u64;
+}
+```
+
+**What this defines:**
+- `init` - Called once when contract is deployed (writes state)
+- `increment` - Increases the counter (writes state)
+- `get` - Returns current count (read-only)
+
+### Step 3: Implement Contract Logic
+
+Create `src/lib.rs`:
+
+```rust
+use stdlib::*;
+
+contract!(name = "counter");
+
+#[derive(Clone, Default, StorageRoot)]
+struct CounterStorage {
+    pub count: u64,
+}
+
+impl Guest for Counter {
+    fn init(ctx: &ProcContext) {
+        CounterStorage::default().init(ctx);
+    }
+
+    fn increment(ctx: &ProcContext) {
+        let current = ctx.model().count();
+        ctx.model().set_count(current + 1);
+    }
+
+    fn get(ctx: &ViewContext) -> u64 {
+        ctx.model().count()
+    }
+}
+```
+
+**How it works:**
+- `contract!(name = "counter")` - Generates the `Guest` trait and WASM bindings
+- `#[derive(StorageRoot)]` - Generates storage accessors (`count()`, `set_count()`)
+- `ctx.model()` - Provides typed access to storage
+- `init()` - Sets initial count to 0
+- `increment()` - Reads current value, increments, writes back
+- `get()` - Returns current value
+
+### Step 4: Build the Contract
+
+```bash
+cargo build --release --target wasm32-unknown-unknown
+```
+
+**Output:** `target/wasm32-unknown-unknown/release/counter.wasm`
+
+**For optimized builds** (recommended), create `build.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+cargo build --release
+cd target/wasm32-unknown-unknown/release
+
+# Optimize
+wasm-opt -Oz --enable-bulk-memory --enable-sign-ext counter.wasm -o counter_opt.wasm
+
+# Compress
+brotli -Zf counter_opt.wasm -o counter.wasm.br
+```
+
+Then:
+```bash
+chmod +x build.sh
+./build.sh
+```
+
+### Step 5: Write Tests
+
+{/* TODO: Finalize test setup instructions - tests currently run in core/indexer package, not separate workspace */}
+
+Create a test file following the pattern from existing examples:
+
+```rust
+use testlib::*;
+
+interface!(name = "counter", path = "../my-counter/wit");
+
+#[runtime(contracts_dir = "../my-counter")]
+async fn test_counter() -> Result<()> {
+    // Create a test user
+    let alice = runtime.identity().await?;
+    
+    // Deploy the counter contract
+    let counter = runtime.publish(&alice, "counter").await?;
+    
+    // Initial value should be 0
+    let value = counter::get(runtime, &counter).await?;
+    assert_eq!(value, 0);
+    
+    // Increment
+    counter::increment(runtime, &counter, &alice).await?;
+    
+    // Value should now be 1
+    let value = counter::get(runtime, &counter).await?;
+    assert_eq!(value, 1);
+    
+    // Increment again
+    counter::increment(runtime, &counter, &alice).await?;
+    
+    let value = counter::get(runtime, &counter).await?;
+    assert_eq!(value, 2);
+    
+    Ok(())
+}
+```
+
+**Run tests:**
+```bash
+cargo test --release
+```
+
+## Common First-Time Errors
+
+**`contract!` macro not found**
+```
+error: cannot find macro `contract` in this scope
+```
+**Solution:** Add `use stdlib::*;` at the top of your file
+
+**Missing Guest trait implementation**
+```
+error: not all trait items implemented, missing: `increment`
+```
+**Solution:** Ensure you've implemented all functions listed in your WIT file
+
+**WIT file parse error**
+```
+error: expected `include`, `use`, `import`, `export`, or `type`
+```
+**Solution:** Ensure you have `include kontor:built-in/built-in;` in your WIT world
+
+**Build fails with missing symbols**
+```
+error: linking with `rust-lld` failed
+```
+**Solution:** Check that `wit-bindgen` version is exactly `0.47.0`
+
+## Next Steps
+
+Now that you've built your first contract, explore:
+
+- [Contract Structure](/docs/sigil/guides/contract-structure) - Deep dive into contract anatomy
+- [Storage Patterns](/docs/sigil/guides/storage) - Learn advanced storage techniques
+- [Examples](/docs/sigil/examples/index) - Study more complex contracts
+- [Testing Guide](/docs/sigil/guides/testing) - Write comprehensive tests
+
+{/* TODO: Add deployment instructions when SDK is ready for mainnet/testnet */}
+

@@ -1,0 +1,333 @@
+---
+title: Storage Patterns
+---
+
+Sigil uses a hierarchical path-based storage model, similar to a filesystem. The storage system provides type-safe accessors through Rust derives that generate methods for reading and writing state.
+
+## Storage Derives
+
+### StorageRoot - Top-Level Contract Storage
+
+Every contract has exactly one `StorageRoot`:
+
+```rust
+#[derive(Clone, Default, StorageRoot)]
+struct TokenStorage {
+    pub ledger: Map<String, Integer>,
+}
+```
+
+**What it generates:**
+- `.init(ctx)` method to initialize storage
+- Accessible via `ctx.model()`
+
+**Usage:**
+```rust
+fn init(ctx: &ProcContext) {
+    TokenStorage::default().init(ctx);
+}
+
+fn mint(ctx: &ProcContext, n: Integer) {
+    let ledger = ctx.model().ledger();  // Access via model()
+    // ...
+}
+```
+
+### Storage - Nested Structures
+
+For structures nested within your storage root:
+
+```rust
+#[derive(Clone, Default, Storage)]
+struct Account {
+    pub balance: Integer,
+    pub owner: String,
+    pub permissions: Map<String, bool>,
+}
+```
+
+**What it generates:**
+- Same accessors as `StorageRoot` but without `.init()`
+- Used for nested data structures
+
+### Store and Model
+
+**`#[derive(Store)]`** - Generates only persistence methods (`__set()`)
+
+**`#[derive(Model)]`** - Generates only read/write accessor types (`*Model`, `*WriteModel`)
+
+Most contracts only need `StorageRoot` and `Storage`.
+
+## Type Constraints
+
+### Supported Storage Types
+
+**Primitive types:**
+- `u64`, `s64`, `bool`, `String`
+
+**Built-in types:**
+- `Integer` - Arbitrary precision (256-bit)
+- `Decimal` - Arbitrary precision with decimals
+- `ContractAddress` - References to other contracts
+
+**Structured types:**
+- Enums and structs with `#[derive(Storage)]` or `#[derive(Wavey)]`
+- `Option<T>` where T is a supported type
+- `Map<K, V>` where K: `ToString` + `FromString`, V is a supported type
+
+### Not Directly Supported
+
+**Vec<T>** - Use `Map<u64, T>` as workaround:
+
+```rust
+// Instead of
+pub items: Vec<String>,
+
+// Use
+pub items: Map<u64, String>,
+
+// Access
+fn add_item(ctx: &ProcContext, item: String) {
+    let items = ctx.model().items();
+    let len = items.keys().count() as u64;
+    items.set(len, item);
+}
+```
+
+**Unsupported primitives** - Use alternatives:
+- No `u32`, `u16`, `u8` → Use `u64`
+- No `f64`, `f32` → Use `Decimal`
+
+## Working with Basic Fields
+
+```rust
+#[derive(Clone, Default, StorageRoot)]
+struct CounterStorage {
+    pub count: u64,
+    pub owner: String,
+    pub active: bool,
+}
+
+impl Guest for Counter {
+    fn init(ctx: &ProcContext) {
+        CounterStorage {
+            count: 0,
+            owner: ctx.signer().to_string(),
+            active: true,
+        }.init(ctx);
+    }
+
+    fn increment(ctx: &ProcContext) {
+        let current = ctx.model().count();      // Read
+        ctx.model().set_count(current + 1);     // Write
+    }
+
+    fn get_owner(ctx: &ViewContext) -> String {
+        ctx.model().owner()                     // Read
+    }
+}
+```
+
+## Working with Options
+
+```rust
+#[derive(Clone, Default, StorageRoot)]
+struct ProxyStorage {
+    contract_address: Option<ContractAddress>,
+}
+
+impl Guest for Proxy {
+    fn get_address(ctx: &ViewContext) -> Option<ContractAddress> {
+        ctx.model().contract_address()  // Returns Option<ContractAddress>
+    }
+
+    fn set_address(ctx: &ProcContext, addr: ContractAddress) {
+        ctx.model().set_contract_address(Some(addr));
+    }
+
+    fn clear_address(ctx: &ProcContext) {
+        ctx.model().set_contract_address(None);
+    }
+}
+```
+
+## Working with Maps
+
+Maps provide key-value storage:
+
+```rust
+#[derive(Clone, Default, StorageRoot)]
+struct TokenStorage {
+    pub ledger: Map<String, Integer>,
+}
+
+impl Guest for Token {
+    fn mint(ctx: &ProcContext, n: Integer) {
+        let ledger = ctx.model().ledger();
+        let account = ctx.signer().to_string();
+
+        // Get (returns Option<V>)
+        let balance = ledger.get(&account).unwrap_or_default();
+
+        // Set
+        ledger.set(account, balance + n);
+    }
+
+    fn all_holders(ctx: &ViewContext) -> Vec<String> {
+        // Iterate keys
+        ctx.model().ledger().keys().collect()
+    }
+}
+```
+
+### Map API
+
+**For read-only access (ViewContext):**
+```rust
+pub trait MapModel<K, V> {
+    fn get(&self, key: K) -> Option<V>;
+    fn keys(&self) -> impl Iterator<Item = K>;
+}
+```
+
+**For read-write access (ProcContext):**
+```rust
+pub trait MapWriteModel<K, V> {
+    fn get(&self, key: K) -> Option<V>;
+    fn set(&self, key: K, value: V);
+    fn keys(&self) -> impl Iterator<Item = K>;
+}
+```
+
+### Map Initialization with Data
+
+```rust
+fn init(ctx: &ProcContext) {
+    FibStorage {
+        cache: Map::new(&[(0, FibValue { value: 0 })]),
+    }.init(ctx);
+}
+```
+
+## Nested Structures
+
+Storage structures can be nested arbitrarily deep:
+
+```rust
+#[derive(Clone, Default, Storage)]
+struct Account {
+    pub balance: Integer,
+    pub owner: String,
+    pub other_tenants: Map<String, bool>,
+}
+
+#[derive(Clone, Default, StorageRoot)]
+struct SharedAccountStorage {
+    pub accounts: Map<String, Account>,
+}
+
+impl Guest for SharedAccount {
+    fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
+        let accounts = ctx.model().accounts();
+        let account = accounts.get(&account_id).ok_or(unknown_error())?;
+
+        // Access nested fields
+        let current_balance = account.balance();
+
+        // Update nested field
+        account.set_balance(current_balance + n);
+
+        Ok(())
+    }
+
+    fn check_permission(ctx: &ViewContext, account_id: String, user: String) -> bool {
+        ctx.model()
+            .accounts()
+            .get(account_id)
+            .map(|account| {
+                // Access nested Map
+                account.other_tenants().get(user).unwrap_or(false)
+            })
+            .unwrap_or(false)
+    }
+}
+```
+
+### Updating Nested Fields with Closures
+
+```rust
+fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
+    let account = ctx.model().accounts().get(account_id).ok_or(unknown_error())?;
+
+    // Update a field using a closure
+    account.update_balance(|b| b + n);
+
+    Ok(())
+}
+```
+
+## Storage Path Internals
+
+Storage uses **DotPathBuf** internally (like filesystem paths):
+
+```rust
+// Given this structure:
+struct Storage {
+    pub accounts: Map<String, Account>,
+}
+
+struct Account {
+    pub balance: Integer,
+}
+
+// Accessing:
+ctx.model().accounts().get("alice").balance()
+
+// Translates to storage path:
+// "accounts.alice.balance"
+```
+
+### Low-Level Storage Operations
+
+The generated models handle storage automatically, but you can access the low-level API directly:
+
+```rust
+// Read
+ctx.storage().get_u64("path.to.field")      // -> Option<u64>
+ctx.storage().get_str("path.to.field")      // -> Option<String>
+ctx.storage().exists("path.to.field")       // -> bool
+
+// Write (ProcContext only)
+ctx.storage().set_u64("path.to.field", 42)
+ctx.storage().set_str("path.to.field", "value")
+ctx.storage().delete_matching_paths("base.path", variants)
+```
+
+**You typically don't use these directly** - the generated models handle storage operations for you.
+
+## Storage Key Scoping
+
+Keys are scoped by path, preventing collisions:
+
+```rust
+struct Storage {
+    pub map_a: Map<String, u64>,  // path: "map_a.*"
+    pub map_b: Map<String, u64>,  // path: "map_b.*"
+}
+```
+
+Keys in `map_a` and `map_b` are independent—they can have the same key without collision.
+
+## Gas Considerations
+
+Storage operations consume gas:
+
+**General guidance:**
+- Storage writes are more expensive than reads
+- Minimize storage writes
+- Cache reads when accessing multiple times
+- Use lazy evaluation (models load only what you access)
+- Map iterations over many keys can be expensive
+
+{/* TODO: Add detailed gas cost model when publicly documented */}
+

@@ -1,0 +1,125 @@
+---
+title: Examples Overview
+sidebar_position: 0
+---
+
+This section covers the example contracts in `example-contracts/`. Each is a self-contained example that builds on concepts introduced in previous ones, progressing from a minimal contract to production-grade DeFi applications. The examples demonstrate how to develop blockchain smart contracts with seamless Rust-like testing and rapid feedback in a local development environment.
+
+## Suggested Learning Order
+
+1. **hello-world** → Minimal contract structure, basic functions
+2. **token** → Map-based ledger, Integer type, error handling
+3. **shared-account** → Nested Maps, authorization patterns
+4. **shared-account-dynamic** → Dynamic contract addresses
+5. **proxy** → Fallback function, delegation patterns
+6. **pool** → DeFi math, liquidity pools
+7. **amm** → Multi-pool AMM, production patterns
+
+{/* Note: arith and fib examples exist in SMART_CONTRACTS_GUIDE but not yet in docs */}
+
+## Example Contracts
+
+### hello-world
+
+Minimal contract demonstrating basic contract structure, view functions, and simple state management.
+
+[View Example →](/docs/sigil/examples/hello-world)
+
+---
+
+### token (59 lines)
+
+Fungible token with Map-based ledger, arbitrary precision Integer arithmetic, balance transfers, and error handling for insufficient funds.
+
+[View Example →](/docs/sigil/examples/token)
+
+---
+
+### shared-account
+
+Multi-tenant account management with two-level nested Maps, authorization patterns (owner and tenants), helper functions for access control, and contract receiving tokens via `contract_signer()`.
+
+[View Example →](/docs/sigil/examples/shared-account)
+
+---
+
+### shared-account-dynamic (extended)
+
+Extended shared-account with dynamic token contract addresses stored in state, enabling runtime token selection and flexible contract configuration.
+
+[View Example →](/docs/sigil/examples/shared-account-dynamic)
+
+---
+
+### proxy (31 lines)
+
+Generic contract delegation using the fallback function, FallContext, and `foreign::call` for dynamic forwarding. Demonstrates proxy/upgrade patterns.
+
+[View Example →](/docs/sigil/examples/proxy)
+
+---
+
+### pool (200+ lines)
+
+Single liquidity pool implementation with constant product AMM math, LP token management, swap calculations, and slippage protection using Integer arithmetic.
+
+[View Example →](/docs/sigil/examples/pool)
+
+---
+
+### amm (350+ lines)
+
+Multi-pool automated market maker managing multiple token pairs with Map of Pool structs, dynamic token handling, pool creation, and production-grade validation logic.
+
+[View Example →](/docs/sigil/examples/amm)
+
+---
+
+## Example Contract Sizes
+
+After optimization and Brotli compression:
+
+| Contract | Compressed Size |
+|----------|----------------|
+| hello-world | ~2 KB |
+| token | ~3 KB |
+| proxy | ~3 KB |
+| shared-account | ~6 KB |
+| pool | ~10 KB |
+| amm | ~12 KB |
+
+## Project Structure
+
+Each contract directory contains:
+- **`contract/`** - Rust code (`src/lib.rs`), WIT interface (`wit/contract.wit`), and `wit/deps/` (symlink to built-in types)
+- **`test/`** - Tests (`src/lib.rs`), `build.rs` (compiles, optimizes, compresses contract), and dependencies
+- **Root `Cargo.toml`** - Workspace configuration
+
+## Running Examples
+
+To test any example contract:
+
+```bash
+cd example-contracts/token  # or any other example
+cargo test
+```
+
+Tests use the Kontor runtime for simulation, loading contract bytes from `target/` after compilation. This provides fast iteration like standard Rust development. Each example assumes familiarity with prior ones, focusing on new concepts.
+
+## Finding the Code
+
+All example contracts are in the repository under `example-contracts/`:
+
+```
+example-contracts/
+├── crypto/
+├── token/
+├── arith/
+├── fib/
+├── proxy/
+├── shared-account/
+├── shared-account-dynamic/
+├── pool/
+└── amm/
+```
+

@@ -37,12 +37,12 @@ Marks the root struct or enum for contract storage.
 
 A key-value store for collections, such as account balances in blockchain contracts. Supports `get`, `set`, and `keys` methods.
 
-## Storage Wrappers
+## Storage Access
 
-Helpers for accessing blockchain storage:
-- `storage(ctx)`: Returns the root storage wrapper.
-- Field accessors (e.g., `storage(ctx).ledger()`): Provide structured access to maps or fields.
-- Get/set methods: Use context to guarantee read only access for views.
+Access contract storage through the context:
+- `ctx.model()`: Returns the typed storage model
+- Field accessors (e.g., `ctx.model().ledger()`): Provide structured access to maps or fields
+- Get/set methods: No ctx parameter needed (e.g., `ledger.get(&key)`, `ledger.set(key, value)`)
 
 ## Signer Access
 
@@ -70,9 +70,13 @@ Applies sha256 hash to the string and returns a hex encoded string of the hash a
 
 Applies sha256 hash to the string concatenated with the salt and returns a hex encoded string of the hash and the hash in raw bytes.
 
-### `Error::new(&str)`
+### Error Type
 
-Creates custom errors for result types in transaction failures.
+The `Error` enum provides error variants for result types:
+- `Error::Message(String)` - Custom error messages
+- `Error::Overflow(String)` - Arithmetic overflow
+- `Error::DivByZero(String)` - Division by zero  
+- `Error::SyntaxError(String)` - Syntax errors
 
 ## Contract Macro
 

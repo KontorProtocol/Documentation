@@ -262,7 +262,6 @@ impl Guest for Amm {
 
         let admin = ctx.signer().to_string();
         ctx.model().pools().set(
-            ctx,
             pair_id(&pair),
             Pool {
                 token_a: pair.a.clone(),
@@ -325,8 +324,8 @@ impl Guest for Amm {
         let res = quote_deposit(ctx, &pool, amount_a, amount_b)?;
         let ledger = pool.lp_ledger();
         let addr = ctx.model().custodian();
-        pool.set_balance_a(pool.balance_a() + res.deposit_a);
-        pool.set_balance_b(pool.balance_b() + res.deposit_b);
+        pool.update_balance_a(|b| b + res.deposit_a);
+        pool.update_balance_b(|b| b + res.deposit_b);
 
         let user = ctx.signer().to_string();
         let bal = ledger.get(&user).unwrap_or_default();
@@ -370,8 +369,8 @@ impl Guest for Amm {
 
         ledger.set(user.clone(), bal - shares);
         pool.set_lp_total_supply(total - shares);
-        pool.set_balance_a(pool.balance_a() - res.amount_a);
-        pool.set_balance_b(pool.balance_b() - res.amount_b);
+        pool.update_balance_a(|b| b - res.amount_a);
+        pool.update_balance_b(|b| b - res.amount_b);
 
         token_dyn::transfer(&pair.a, ctx.contract_signer(), &user, res.amount_a)?;
         token_dyn::transfer(&pair.b, ctx.contract_signer(), &user, res.amount_b)?;
@@ -407,11 +406,11 @@ impl Guest for Amm {
 
         let pool = get_pool(ctx, &pair)?;
         if token_in == pair.a {
-            pool.set_balance_a(pool.balance_a() + amount_in);
-            pool.set_balance_b(pool.balance_b() - amount_out);
+            pool.update_balance_a(|b| b + amount_in);
+            pool.update_balance_b(|b| b - amount_out);
         } else {
-            pool.set_balance_a(pool.balance_a() - amount_out);
-            pool.set_balance_b(pool.balance_b() + amount_in);
+            pool.update_balance_a(|b| b - amount_out);
+            pool.update_balance_b(|b| b + amount_in);
         }
 
         token_dyn::transfer(

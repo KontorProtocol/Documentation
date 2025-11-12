@@ -463,16 +463,16 @@ mod tests {
         assert!(k3 >= k2);
 
         // use token interface to transfer shares
-        let res = token_dyn::balance(runtime, &pool, &admin).await?;
+        let res = token::balance(runtime, &pool, &admin).await?;
         assert_eq!(res, Some(223.into()));
-        let res = token_dyn::balance(runtime, &pool, &minter).await?;
+        let res = token::balance(runtime, &pool, &minter).await?;
         assert_eq!(res, None);
 
-        token_dyn::transfer(runtime, &pool, &admin, &minter, 23.into()).await??;
+        token::transfer(runtime, &pool, &admin, &minter, 23.into()).await??;
 
-        let res = token_dyn::balance(runtime, &pool, &admin).await?;
+        let res = token::balance(runtime, &pool, &admin).await?;
         assert_eq!(res, Some(200.into()));
-        let res = token_dyn::balance(runtime, &pool, &minter).await?;
+        let res = token::balance(runtime, &pool, &minter).await?;
         assert_eq!(res, Some(23.into()));
 
         Ok(())

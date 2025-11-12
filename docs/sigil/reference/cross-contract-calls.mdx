@@ -97,7 +97,7 @@ impl Guest for SharedAccount {
         Ok(())
     }
 
-    fn check_balance(
+    fn token_balance(
         _ctx: &ViewContext,
         token: ContractAddress,
         holder: String,
@@ -125,15 +125,6 @@ let addr = ContractAddress {
     height: 100,
     tx_index: 0,
 };
-```
-
-**Getting your own address:**
-```rust
-use stdlib::*;
-
-fn my_address() -> ContractAddress {
-    foreign::get_contract_address()
-}
 ```
 
 ## Call Context and Signers

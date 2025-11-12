@@ -5,42 +5,64 @@ title: Getting Started
 
 This guide walks you through setting up your development environment for Sigil smart contract development.
 
-## Prerequisites
+## Full Development Environment
+
+If you're setting up a full Kontor development environment (including running the indexer and tests), see the [Kontor README](https://github.com/KontorProtocol/Kontor/blob/main/README.md) which covers:
+- Installing all build dependencies (Bitcoin, ZMQ, etc.)
+- Compiling Bitcoin Core for local testing
+- Running the full test suite
+- Docker deployment
+
+## Contract Development Only
+
+To develop and test Sigil contracts without running a local indexer:
 
 ### Install Dependencies
 
-#### MacOS
-Install `binaryen` and `brotli` using Homebrew:
+**MacOS:**
 ```bash
 brew install binaryen brotli
 ```
 
-#### Debian
-Install `binaryen` and `brotli`:
+**Ubuntu:**
 ```bash
 sudo apt install binaryen brotli
 ```
 
 ### Set Up Rust
-Sigil is built with Rust, so you need the latest stable Rust version installed.
 
-1. Install Rust by following the instructions at [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) or update to the latest stable version.
-2. Add the WebAssembly target for compiling Sigil contracts:
+1. Install Rust from [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
+2. Add the WebAssembly target:
    ```bash
    rustup target add wasm32-unknown-unknown
    ```
+3. Install additional tools:
+   ```bash
+   cargo install wasm-opt
+   ```
 
-## Your First Contract
+## Working with Example Contracts
 
-Now that your environment is set up, follow the [Hello World example](/docs/sigil/examples/hello-world) to build and test your first Sigil smart contract.
+The [example contracts](https://github.com/KontorProtocol/Documentation/tree/main/example-contracts) in this documentation repository require the Kontor indexer `core` libraries. 
 
-The Hello World tutorial covers:
-- Project structure and configuration
-- Writing the WIT interface
-- Implementing contract logic
-- Building and optimizing WASM output
-- Writing and running tests
-- Common errors and solutions
+**If you clone both repos as siblings**, the paths work out of the box:
+```bash
+mkdir kontor-dev
+cd kontor-dev
+git clone https://github.com/KontorProtocol/Documentation.git
+git clone https://github.com/KontorProtocol/Kontor.git
+cd Documentation/example-contracts/hello-world/test
+cargo test  # Will automatically build and test
+```
+
+**If your directory structure is different**, update the workspace dependencies in each example's root `Cargo.toml`:
+```toml
+[workspace.dependencies]
+testlib = { path = "/path/to/Kontor/core/testlib" }
+stdlib = { path = "/path/to/Kontor/core/stdlib" }
+```
+
+Alternatively, create your own contract workspace from scratch following the [Hello World example](/docs/sigil/examples/hello-world), which shows the complete setup.
 
 ## Next Steps
 

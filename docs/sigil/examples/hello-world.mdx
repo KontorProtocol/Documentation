@@ -39,6 +39,10 @@ stdlib = { path = "../../Kontor/core/stdlib" }
 testlib = { path = "../../Kontor/core/testlib" }
 ```
 
+<Note>
+The paths shown assume the `Documentation` and `Kontor` repos are siblings. If you cloned them to different locations, adjust these paths to point to your Kontor installation. See [Getting Started](/docs/sigil/quickstart#working-with-example-contracts) for setup details.
+</Note>
+
 ## Step 2: Contract Configuration
 
 **`contract/Cargo.toml`:**
@@ -106,19 +110,27 @@ impl Guest for HelloWorld {
 - `init()` - Empty because we don't need storage
 - `hello_world()` - Returns a static string
 
-## Step 5: Build the Contract
+## Step 5: Build and Test
 
+The contract is automatically built when you run tests. The test directory's `build.rs` handles compilation, optimization, and compression:
+
+```bash
+cd test
+cargo test
+```
+
+The `build.rs` automatically:
+1. Compiles the contract to WASM
+2. Optimizes with `wasm-opt -Oz --enable-bulk-memory --enable-sign-ext`
+3. Compresses with `brotli` to create `.wasm.br`
+
+**To build manually without running tests:**
 ```bash
 cd contract
 cargo build --release --target wasm32-unknown-unknown
-```
-
-**Output:** `contract/target/wasm32-unknown-unknown/release/hello_world.wasm`
-
-For optimized builds, you can use `wasm-opt` and `brotli` compression (optional for testing):
-
-```bash
-wasm-opt -Oz hello_world.wasm -o hello_world_opt.wasm
+wasm-opt -Oz --enable-bulk-memory --enable-sign-ext \
+  target/wasm32-unknown-unknown/release/hello_world.wasm \
+  -o hello_world_opt.wasm
 brotli -Zf hello_world_opt.wasm -o hello_world.wasm.br
 ```
 

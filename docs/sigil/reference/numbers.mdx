@@ -302,3 +302,61 @@ fn min(a: Integer, b: Integer) -> Integer {
 }
 ```
 
+## Quick Reference
+
+### Number Types and Ranges
+
+**Integer**
+- 256-bit signed arbitrary precision integers
+- Range: `±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457`
+- Maximum value: 2^256 - 1
+
+**Decimal**
+- Arbitrary precision decimals with up to 18 decimal places
+- Range: `±(2^256 - 1) / 10^18`
+- Full range: `±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457.584_007_913_129_639_936`
+
+### Arithmetic Operations
+
+Both types support basic arithmetic operations (`add`, `sub`, `mul`, `div`) and comparisons.
+
+**Unchecked (using operators):**
+```rust
+let result = a + b;    // Panics on overflow
+let result = a - b;    // Panics on underflow
+let result = a * b;    // Panics on overflow
+let result = a / b;    // Panics on division by zero
+```
+
+**Checked (using methods):**
+```rust
+let result = a.add(b)?;    // Returns Result<Integer, Error>
+let result = a.sub(b)?;    // Error::Overflow on overflow
+let result = a.mul(b)?;    // Error::Overflow on overflow
+let result = a.div(b)?;    // Error::DivByZero on zero
+```
+
+### Advanced Operations
+
+**Integer:**
+- `.sqrt()` - Square root (returns `Result<Integer, Error>`)
+
+**Decimal:**
+- `.log10()` - Base-10 logarithm (returns `Result<Decimal, Error>`)
+- Additional operations to be expanded
+
+### Type Conversions
+
+```rust
+// Integer from literals
+let i: Integer = 42.into();
+let i: Integer = "1_000_000".into();
+
+// Decimal from Integer
+let d = Decimal::from(integer);
+
+// Integer from Decimal (truncates)
+let i = decimal.to_integer();
+```
+
+

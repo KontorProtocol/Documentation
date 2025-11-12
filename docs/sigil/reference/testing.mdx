@@ -1,30 +1,419 @@
 ---
-sidebar_position: 2
-title: Testing
+title: Testing Contracts
 ---
 
-# Testing Environment Reference
+Sigil contracts are tested using the `testlib` crate, which provides a test runtime that simulates the blockchain environment. Tests use the same contract code that runs on-chain, with an in-memory backend for fast iteration.
 
-## Runtime
+## Test Harness Setup
 
-The test runtime is automatically injected via the `#[testlib::test]` attribute. It provides methods for managing test execution:
+### Test File Structure
 
-### `runtime.identity() -> Result<Signer>`
+```rust
+use testlib::*;
 
-Creates a new test identity (user) with automatic gas funding.
+// Import contract interface (path relative to test directory)
+interface!(name = "token", path = "contract/wit");
 
-### `runtime.publish(&signer, "name") -> Result<ContractAddress>`
+// Test function with #[testlib::test] attribute
+#[testlib::test]
+async fn test_token_contract() -> Result<()> {
+    // 'runtime' is injected automatically
+    let signer = runtime.identity().await?;
+    let token = runtime.publish(&signer, "token").await?;
 
-Deploys a contract from compiled bytecode and returns its address.
+    // Test calls (note the double ?? for Result<Result<T, Error>>)
+    token::mint(runtime, &token, &signer, 100.into()).await??;
 
-### `runtime.wit(&contract_address) -> Result<String>`
+    let balance = token::balance(runtime, &token, &signer).await?;
+    assert_eq!(balance, Some(100.into()));
 
-Retrieves the WIT interface of a deployed contract.
+    Ok(())
+}
+```
 
-## Test Attribute
+### The #[testlib::test] Attribute
 
-Use `#[testlib::test]` to mark async test functions:
+**Syntax:**
+```rust
+#[testlib::test]
+async fn my_test() -> Result<()> { ... }
 
+#[testlib::test(mode = "regtest")]
+async fn my_integration_test() -> Result<()> { ... }
+```
+
+**Parameters:**
+- `mode` - Optional: `"regtest"` for integration tests against real blockchain
+
+**What it provides:**
+- `runtime: &mut Runtime` - Automatically injected variable
+- Test isolation (each test gets fresh state)
+- Automatic contract loading from compiled bytecode
+
+## Runtime API
+
+```rust
+impl Runtime {
+    // Create a new identity (test user)
+    async fn identity(&mut self) -> Result<Signer>;
+
+    // Publish a contract
+    async fn publish(&mut self, signer: &Signer, name: &str) -> Result<ContractAddress>;
+
+    // Get contract's WIT interface
+    async fn wit(&mut self, contract_address: &ContractAddress) -> Result<String>;
+
+    // Issue gas to a signer
+    async fn issuance(&mut self, signer: &Signer) -> Result<()>;
+}
+```
+
+## Creating Test Identities
+
+Each test can create multiple users:
+
+```rust
+#[testlib::test]
+async fn test_multi_user() -> Result<()> {
+    let alice = runtime.identity().await?;
+    let bob = runtime.identity().await?;
+
+    // Both users are funded with gas automatically
+    let token = runtime.publish(&alice, "token").await?;
+
+    token::mint(runtime, &token, &alice, 1000.into()).await?;
+    token::transfer(runtime, &token, &alice, &bob, 100.into()).await??;
+
+    Ok(())
+}
+```
+
+## Publishing Contracts
+
+```rust
+#[testlib::test]
+async fn test_publish() -> Result<()> {
+    let deployer = runtime.identity().await?;
+
+    // Publishes from example-contracts/target/.../token.wasm.br
+    let token = runtime.publish(&deployer, "token").await?;
+
+    // Contract is initialized (init() is called automatically)
+    // Returns ContractAddress { name: "token", height: 1, tx_index: 0 }
+
+    Ok(())
+}
+```
+
+**Contract addressing:**
+- Contracts are identified by `(name, height, tx_index)`
+- In tests, first published contract is at height 1, tx_index 0
+- Second contract is at height 2, tx_index 0, etc.
+
+## Calling Contract Functions
+
+### Understanding the Double Question Mark
+
+Generated contract functions return `Result<Result<T, Error>>`:
+
+```rust
+// Signature of generated function:
+pub async fn transfer(
+    runtime: &mut Runtime,
+    contract_address: &ContractAddress,
+    signer: &Signer,
+    to: &str,
+    n: Integer
+) -> Result<Result<(), Error>>
+```
+
+**Why two Results?**
+- **Outer `Result`** - Runtime errors (network, execution failures)
+- **Inner `Result`** - Contract errors (business logic failures)
+
+**Usage:**
+```rust
+// Option 1: Propagate both errors
+token::transfer(runtime, &token, &alice, &bob, 100.into()).await??;
+//                                                               ^^
+// First ? unwraps runtime error
+// Second ? unwraps contract error
+
+// Option 2: Handle separately
+let result = token::transfer(runtime, &token, &alice, &bob, 100.into()).await?;
+match result {
+    Ok(()) => { /* transfer succeeded */ },
+    Err(e) => { /* handle contract error */ },
+}
+```
+
+### Testing View Functions
+
+```rust
+#[testlib::test]
+async fn test_balance_query() -> Result<()> {
+    let alice = runtime.identity().await?;
+    let token = runtime.publish(&alice, "token").await?;
+
+    // View functions return Option or direct values
+    let balance = token::balance(runtime, &token, &alice).await?;
+    assert_eq!(balance, None);  // No tokens yet
+
+    token::mint(runtime, &token, &alice, 100.into()).await?;
+
+    let balance = token::balance(runtime, &token, &alice).await?;
+    assert_eq!(balance, Some(100.into()));
+
+    Ok(())
+}
+```
+
+## Testing Errors
+
+### Expected Business Logic Errors
+
+```rust
+#[testlib::test]
+async fn test_insufficient_funds() -> Result<()> {
+    let alice = runtime.identity().await?;
+    let bob = runtime.identity().await?;
+    let token = runtime.publish(&alice, "token").await?;
+
+    // Alice has no tokens, transfer should fail
+    let result = token::transfer(runtime, &token, &alice, &bob, 100.into()).await?;
+
+    assert_eq!(
+        result,
+        Err(Error::Message("insufficient funds".to_string()))
+    );
+
+    Ok(())
+}
+```
+
+### Using is_err_and
+
+```rust
+let result = risky_operation().await;
+assert!(result.is_err_and(|e|
+    e.root_cause().to_string().contains("expected error message")
+));
+```
+
+## Testing Cross-Contract Calls
+
+```rust
+#[testlib::test]
+async fn test_fib_with_arith() -> Result<()> {
+    let signer = runtime.identity().await?;
+
+    // Publish both contracts
+    let arith = runtime.publish(&signer, "arith").await?;
+    let fib = runtime.publish(&signer, "fib").await?;
+
+    // Fib contract calls arith contract internally
+    let result = fib::fib(runtime, &fib, &signer, arith.clone(), 8).await?;
+    assert_eq!(result, 21);
+
+    Ok(())
+}
+```
+
+## Testing Re-entrancy Protection
+
+The runtime prevents re-entrancy automatically:
+
+```rust
+#[testlib::test]
+async fn test_reentrancy() -> Result<()> {
+    let signer = runtime.identity().await?;
+    let fib = runtime.publish(&signer, "fib").await?;
+    let arith = runtime.publish(&signer, "arith").await?;
+
+    // arith tries to call fib which calls back to arith -> Error
+    let result = arith::fib(runtime, &arith, &signer, fib.clone(), 9).await;
+
+    assert!(result.is_err_and(|e|
+        e.root_cause().to_string().contains("reentrancy prevented")
+    ));
+
+    Ok(())
+}
+```
+
+## Complete Test Example
+
+```rust
+use testlib::*;
+use tracing::info;
+
+interface!(name = "token", path = "../example-contracts/token/wit");
+
+async fn run_test_token_contract(runtime: &mut Runtime) -> Result<()> {
+    info!("test_token_contract");
+    let minter = runtime.identity().await?;
+    let holder = runtime.identity().await?;
+    let token = runtime.publish(&minter, "token").await?;
+
+    // Mint tokens
+    token::mint(runtime, &token, &minter, 900.into()).await?;
+    token::mint(runtime, &token, &minter, 100.into()).await?;
+
+    // Check balance
+    let result = token::balance(runtime, &token, &minter).await?;
+    assert_eq!(result, Some(1000.into()));
+
+    // Test insufficient funds error
+    let result = token::transfer(runtime, &token, &holder, &minter, 123.into()).await?;
+    assert_eq!(
+        result,
+        Err(Error::Message("insufficient funds".to_string()))
+    );
+
+    // Successful transfers
+    token::transfer(runtime, &token, &minter, &holder, 40.into()).await??;
+    token::transfer(runtime, &token, &minter, &holder, 2.into()).await??;
+
+    let result = token::balance(runtime, &token, &holder).await?;
+    assert_eq!(result, Some(42.into()));
+
+    let result = token::balance(runtime, &token, &minter).await?;
+    assert_eq!(result, Some(958.into()));
+
+    // Test non-existent account
+    let result = token::balance(runtime, &token, "foo").await?;
+    assert_eq!(result, None);
+
+    Ok(())
+}
+
+#[testlib::test]
+async fn test_token_contract() -> Result<()> {
+    run_test_token_contract(runtime).await
+}
+```
+
+## Integration Tests (Regtest Mode)
+
+Tests can run against a real Bitcoin regtest blockchain:
+
+```rust
+#[testlib::test(mode = "regtest")]
+async fn test_token_on_regtest() -> Result<()> {
+    // Enable logging
+    logging::setup();
+
+    let alice = runtime.identity().await?;
+    let token = runtime.publish(&alice, "token").await?;
+
+    token::mint(runtime, &token, &alice, 1000.into()).await?;
+
+    // State is persisted to real blockchain
+    Ok(())
+}
+```
+
+**Regtest mode:**
+- Runs against actual Bitcoin regtest
+- State persists across tests
+- Slower but provides full blockchain validation
+- Useful for final integration testing before testnet deployment
+
+## Running Tests
+
+```bash
+# Run all tests in a contract
+cd example-contracts/token
+cargo test
+
+# Run specific test
+cargo test test_token_contract
+
+# Run with logging output
+cargo test test_token_contract -- --nocapture
+
+# Run integration tests
+cargo test test_token_contract_regtest --release
+```
+
+## Test Organization
+
+**Test directory structure:**
+```
+test/
+├── Cargo.toml
+├── build.rs         # Compiles contract to WASM
+└── src/
+    └── lib.rs       # Test module
+```
+
+**Test file (test/src/lib.rs):**
+```rust
+#[cfg(test)]
+mod tests {
+    use testlib::*;
+
+    interface!(name = "my_contract", path = "contract/wit");
+
+    #[testlib::test]
+    async fn test_something() -> Result<()> {
+        // Test code
+    }
+}
+```
+
+## Best Practices
+
+**1. Test both success and failure cases**
+```rust
+// Success path
+token::transfer(runtime, &token, &alice, &bob, 10.into()).await??;
+
+// Failure path
+let result = token::transfer(runtime, &token, &alice, &bob, 99999.into()).await?;
+assert!(result.is_err());
+```
+
+**2. Use descriptive test names**
+```rust
+#[testlib::test]
+async fn test_transfer_fails_with_insufficient_funds() -> Result<()> { ... }
+```
+
+**3. Factor out common setup**
+```rust
+async fn setup_token_with_balance(runtime: &mut Runtime, amount: Integer) -> Result<(Signer, ContractAddress)> {
+    let signer = runtime.identity().await?;
+    let token = runtime.publish(&signer, "token").await?;
+    token::mint(runtime, &token, &signer, amount).await?;
+    Ok((signer, token))
+}
+
+#[testlib::test]
+async fn test_with_setup() -> Result<()> {
+    let (alice, token) = setup_token_with_balance(runtime, 1000.into()).await?;
+    // ... test logic
+}
+```
+
+## Quick Reference
+
+### Runtime API
+
+The test runtime is automatically injected via the `#[testlib::test]` attribute:
+
+**runtime.identity() -> Result<Signer>**
+- Creates a new test identity (user) with automatic gas funding
+
+**runtime.publish(&signer, "name") -> Result<ContractAddress>**
+- Deploys a contract from compiled bytecode and returns its address
+
+**runtime.wit(&contract_address) -> Result<String>**
+- Retrieves the WIT interface of a deployed contract
+
+### Test Attribute
+
+**Basic test:**
 ```rust
 #[testlib::test]
 async fn my_test() -> Result<()> {
@@ -36,8 +425,7 @@ async fn my_test() -> Result<()> {
 }
 ```
 
-For integration tests against Bitcoin regtest:
-
+**Integration test (Bitcoin regtest):**
 ```rust
 #[testlib::test(mode = "regtest")]
 async fn my_integration_test() -> Result<()> {
@@ -45,7 +433,7 @@ async fn my_integration_test() -> Result<()> {
 }
 ```
 
-## Interface Macro
+### Interface Macro
 
 Generates type-safe bindings for contract calls:
 
@@ -59,4 +447,6 @@ Generated functions are async and take `runtime`, `contract_address`, and `signe
 token::mint(runtime, &token_address, &signer, amount).await??;
 ```
 
-For tests, use `interface!` which generates bindings for any contract address. The `import!` macro (for fixed addresses) is rarely needed in tests.
+**Note:** For tests, use `interface!` which generates bindings for any contract address. The `import!` macro (for fixed addresses) is rarely needed in tests.
+
+

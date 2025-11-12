@@ -57,8 +57,7 @@
       "pages": [
         "docs/sigil/introduction",
         "docs/sigil/quickstart",
-        "docs/sigil/architecture",
-        "docs/sigil/getting-started"
+        "docs/sigil/architecture"
       ]
     },
     {

@@ -1,16 +1,34 @@
 ---
-sidebar_position: 4
-title: Quickstart Tutorial
+sidebar_position: 3
+title: Getting Started
 ---
 
-This tutorial walks you through creating, building, and testing your first Sigil smart contract—a simple counter that demonstrates the fundamentals.
+This guide walks you through setting up your development environment and creating your first Sigil smart contract—a simple counter that demonstrates the fundamentals.
 
-## Prerequisites
+## Setup
 
-Ensure you have the required dependencies installed (see [Getting Started](/docs/sigil/getting-started) for installation instructions):
-- Rust with `wasm32-unknown-unknown` target
-- `binaryen` (provides `wasm-opt`)
-- `brotli` compression tool
+### Install Dependencies
+
+#### MacOS
+Install `binaryen` and `brotli` using Homebrew:
+```bash
+brew install binaryen brotli
+```
+
+#### Debian
+Install `binaryen` and `brotli`:
+```bash
+sudo apt install binaryen brotli
+```
+
+### Set Up Rust
+Sigil is built with Rust, so you need the latest stable Rust version installed.
+
+1. Install Rust by following the instructions at [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) or update to the latest stable version.
+2. Add the WebAssembly target for compiling Sigil contracts:
+   ```bash
+   rustup target add wasm32-unknown-unknown
+   ```
 
 ## Create Your Counter Contract
 
@@ -207,15 +225,3 @@ error: expected `include`, `use`, `import`, `export`, or `type`
 error: linking with `rust-lld` failed
 ```
 **Solution:** Check that `wit-bindgen` version is exactly `0.47.0`
-
-## Next Steps
-
-Now that you've built your first contract, explore:
-
-- [Contract Structure](/docs/sigil/guides/contract-structure) - Deep dive into contract anatomy
-- [Storage Patterns](/docs/sigil/guides/storage) - Learn advanced storage techniques
-- [Examples](/docs/sigil/examples/index) - Study more complex contracts
-- [Testing Guide](/docs/sigil/guides/testing) - Write comprehensive tests
-
-{/* TODO: Add deployment instructions when SDK is ready for mainnet/testnet */}
-

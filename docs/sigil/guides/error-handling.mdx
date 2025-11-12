@@ -330,7 +330,6 @@ async fn test_insufficient_funds() -> Result<()> {
     Ok(())
 }
 ```
-
 ### Testing Error Messages
 
 ```rust
@@ -339,4 +338,5 @@ assert!(result.is_err_and(|e|
     e.root_cause().to_string().contains("expected substring")
 ));
 ```
+
 

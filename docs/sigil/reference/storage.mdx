@@ -266,45 +266,6 @@ fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Erro
 }
 ```
 
-## Storage Path Internals
-
-Storage uses **DotPathBuf** internally (like filesystem paths):
-
-```rust
-// Given this structure:
-struct Storage {
-    pub accounts: Map<String, Account>,
-}
-
-struct Account {
-    pub balance: Integer,
-}
-
-// Accessing:
-ctx.model().accounts().get("alice").balance()
-
-// Translates to storage path:
-// "accounts.alice.balance"
-```
-
-### Low-Level Storage Operations
-
-The generated models handle storage automatically, but you can access the low-level API directly:
-
-```rust
-// Read
-ctx.storage().get_u64("path.to.field")      // -> Option<u64>
-ctx.storage().get_str("path.to.field")      // -> Option<String>
-ctx.storage().exists("path.to.field")       // -> bool
-
-// Write (ProcContext only)
-ctx.storage().set_u64("path.to.field", 42)
-ctx.storage().set_str("path.to.field", "value")
-ctx.storage().delete_matching_paths("base.path", variants)
-```
-
-**You typically don't use these directly** - the generated models handle storage operations for you.
-
 ## Storage Key Scoping
 
 Keys are scoped by path, preventing collisions:

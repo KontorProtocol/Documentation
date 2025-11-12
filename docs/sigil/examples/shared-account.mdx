@@ -40,7 +40,7 @@ world root {
 ```
 
 ## Rust Implementation
-- The `import!` macro generates an interface for cross-contract calls to the `token` contract, as seen in the test environment previously.
+- The `interface!` macro generates an interface for cross-contract calls to the `token` contract with a dynamic address (passed as a parameter). Use `import!` when the dependency contract has been previously published and the contract address is known at compile time.
 - The `StorageRoot` macro, used for the root storage type, and the `Storage` macro, used for nested storage types in the `Account` struct, enable persistent storage.
 - `other_tenants` uses `Map<String, bool>` because the storage layer does not currently support list types, and `Map` provides a limited interface with the `keys` method for iteration. Even with a `List` type using a `Map` here could make sense. Instead of `bool` an `enum` or `struct` that defines the their "role" in the account could be written.
 - `authorized` Verifies procedure permissions

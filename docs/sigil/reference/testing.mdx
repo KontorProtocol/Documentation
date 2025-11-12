@@ -402,13 +402,13 @@ async fn test_with_setup() -> Result<()> {
 
 The test runtime is automatically injected via the `#[testlib::test]` attribute:
 
-**runtime.identity() -> Result<Signer>**
+**runtime.identity() -> Result&lt;Signer&gt;**
 - Creates a new test identity (user) with automatic gas funding
 
-**runtime.publish(&signer, "name") -> Result<ContractAddress>**
+**runtime.publish(&signer, "name") -> Result&lt;ContractAddress&gt;**
 - Deploys a contract from compiled bytecode and returns its address
 
-**runtime.wit(&contract_address) -> Result<String>**
+**runtime.wit(&contract_address) -> Result&lt;String&gt;**
 - Retrieves the WIT interface of a deployed contract
 
 ### Test Attribute

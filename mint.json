@@ -61,14 +61,14 @@
       ]
     },
     {
-      "group": "Guides",
+      "group": "Reference",
       "pages": [
-        "docs/sigil/guides/contract-structure",
-        "docs/sigil/guides/storage",
-        "docs/sigil/guides/cross-contract-calls",
-        "docs/sigil/guides/error-handling",
-        "docs/sigil/guides/numbers",
-        "docs/sigil/guides/testing"
+        "docs/sigil/reference/contract-structure",
+        "docs/sigil/reference/storage",
+        "docs/sigil/reference/cross-contract-calls",
+        "docs/sigil/reference/error-handling",
+        "docs/sigil/reference/numbers",
+        "docs/sigil/reference/testing"
       ]
     },
     {
@@ -81,14 +81,6 @@
         "docs/sigil/examples/proxy",
         "docs/sigil/examples/amm",
         "docs/sigil/examples/pool"
-      ]
-    },
-    {
-      "group": "Reference",
-      "pages": [
-        "docs/sigil/reference/implementation",
-        "docs/sigil/reference/testing",
-        "docs/sigil/reference/numerics"
       ]
     },
     {

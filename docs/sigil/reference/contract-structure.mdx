@@ -244,3 +244,98 @@ fn fallback(ctx: &FallContext, expr: String) -> String {
 - Version upgrades
 - Generic delegation
 
+## Quick Reference
+
+### Context Types
+
+**ProcContext**
+- Enables state-modifying operations, such as balance transfers
+- Provides write access to storage and signer access via `ctx.signer()`
+- Used in functions like `mint` or `transfer` to update blockchain state
+
+**ViewContext**
+- Supports read-only queries for inspecting contract state
+- Restricts access to read-only storage operations, no signer or mutations allowed
+- Used in functions like `balance` for retrieving data without modifying the blockchain
+
+**FallContext**
+- Manages unmatched calls via the `fallback` hook, enabling proxy patterns
+- Converts to `ViewContext` or `Option<ProcContext>` for storage reads
+- Exclusive to the `fallback` function for dynamic routing
+
+### Context Traits (for helper functions)
+
+**WriteContext**
+- For mutation logic (e.g., internal updates)
+- Implemented only by `ProcContext`
+
+**ReadContext**
+- For read-only logic (e.g., internal queries)
+- Implemented by both `ViewContext` and `ProcContext`, enabling shared read operations
+
+### Storage
+
+**StorageRoot**
+- Marks the root struct or enum for contract storage
+
+**Map<Key, Value>**
+- Key-value store for collections (e.g., account balances)
+- Supports `get`, `set`, and `keys` methods
+
+**Storage Access**
+- `ctx.model()` - Returns the typed storage model
+- Field accessors (e.g., `ctx.model().ledger()`) - Provide structured access
+- Get/set methods - No ctx parameter needed (e.g., `ledger.get(&key)`, `ledger.set(key, value)`)
+
+### Signer Access
+
+- `ctx.signer()` - Retrieves the transaction signer (ProcContext only)
+- `ctx.contract_signer()` - Returns the contract's own address (for receiving tokens)
+
+### Cross-Contract Calls
+
+**Static imports:**
+```rust
+import!(name = "token", height = 12345, tx_index = 0, path = "path/to/wit");
+// Direct calls: token::transfer(...)
+```
+
+**Dynamic interfaces:**
+```rust
+interface!(name = "token_dyn", path = "path/to/wit");
+// Dynamic calls with address: token_dyn::transfer(&address, ...)
+```
+
+### Utilities
+
+**crypto::generate_id() -> String**
+- Generates unique IDs for entities (e.g., account IDs)
+
+**crypto::hash(String) -> (String, Vec<u8>)**
+- Applies sha256 hash and returns hex encoded string and raw bytes
+
+**crypto::hash_with_salt(data: String, salt: String) -> (String, Vec<u8>)**
+- Applies sha256 hash to string concatenated with salt
+
+### Error Type
+
+```rust
+enum Error {
+    Message(String),      // Custom error messages
+    Overflow(String),     // Arithmetic overflow
+    DivByZero(String),    // Division by zero
+    SyntaxError(String),  // Syntax errors
+}
+```
+
+### Macros
+
+**contract!(name = "name")**
+- Defines contract name and generates boilerplate code from WIT file
+
+**import!(name, height, tx_index, path)**
+- Statically imports another contract's WIT for cross-contract calls
+
+**interface!(name, path)**
+- Defines dynamic interface for runtime contract calls with dynamic addresses
+

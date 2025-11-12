@@ -313,7 +313,7 @@ fn withdraw(ctx: &ProcContext, token: ContractAddress, amount: Integer) -> Resul
 ### Testing Expected Errors
 
 ```rust
-#[runtime(contracts_dir = "../../example-contracts")]
+#[testlib::test]
 async fn test_insufficient_funds() -> Result<()> {
     let alice = runtime.identity().await?;
     let bob = runtime.identity().await?;

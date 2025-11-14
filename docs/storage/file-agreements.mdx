@@ -5,6 +5,27 @@ title: File Agreements
 
 A file agreement is the protocol's commitment to store a specific file forever. Creating an agreement involves three phases: preparing the file for storage, distributing it to potential storage nodes, and broadcasting the agreement transaction to Bitcoin. Once enough nodes join and the agreement activates, the file enters the active set and begins earning emissions.
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant SN as Storage Nodes
+    participant BC as Bitcoin Blockchain
+    participant IX as Indexer
+
+    U->>U: Prepare File<br/>(Erasure + Merkle)
+    U->>SN: Distribute File Data
+    U->>BC: Create Agreement Tx
+    BC->>IX: Mine Block
+    IX->>IX: Create Inactive Agreement
+    
+    rect rgb(240, 240, 240)
+        SN->>BC: Join Agreement Tx
+        BC->>IX: Mine Block
+        IX->>IX: Add Node to Agreement
+        IX->>IX: Activate ($$ N_f > n_{min}$$)
+    end
+```
+
 ## File Preparation
 
 Before anything touches the blockchain, the user prepares the file locally. This preparation transforms raw data into a fault-tolerant, self-authenticating structure that storage nodes can efficiently prove they possess.

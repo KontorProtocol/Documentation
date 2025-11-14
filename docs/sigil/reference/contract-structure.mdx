@@ -1,0 +1,341 @@
+---
+title: Contract Structure
+---
+
+A Sigil contract consists of five key components: imports, the contract declaration, interface imports (optional), storage definitions, and the Guest trait implementation containing your contract logic.
+
+## Anatomy of a Contract
+
+```rust
+// 1. Import the standard library
+use stdlib::*;
+
+// 2. Declare the contract
+contract!(name = "token");
+
+// 3. Import other contract interfaces (optional)
+interface!(name = "other_contract", path = "other/wit");
+
+// 4. Define storage structure(s)
+#[derive(Clone, Default, StorageRoot)]
+struct TokenStorage {
+    pub ledger: Map<String, Integer>,
+}
+
+// 5. Implement the Guest trait (contract logic)
+impl Guest for Token {
+    fn init(ctx: &ProcContext) {
+        TokenStorage::default().init(ctx);
+    }
+
+    fn mint(ctx: &ProcContext, n: Integer) {
+        let ledger = ctx.model().ledger();
+        let account = ctx.signer().to_string();
+        let balance = ledger.get(&account).unwrap_or_default();
+        ledger.set(account, balance + n);
+    }
+
+    fn balance(ctx: &ViewContext, acc: String) -> Option<Integer> {
+        ctx.model().ledger().get(&acc)
+    }
+}
+```
+
+## The contract! Macro
+
+The `contract!` macro generates the necessary boilerplate for your contract:
+
+```rust
+contract!(name = "my_contract");
+```
+
+**What it does:**
+- Generates wit-bindgen glue code
+- Creates the `Guest` trait you implement
+- Sets up WASM component exports
+- The name must match your WIT package
+
+**Requirements:**
+- Must appear after `use stdlib::*;`
+- Name must match the contract name in your WIT file
+
+## Context Types
+
+Every function in a Sigil contract receives a context as its first parameter. There are three context types:
+
+### ViewContext - Read-Only Queries
+
+```rust
+fn balance(ctx: &ViewContext, acc: String) -> Option<Integer> {
+    ctx.model().ledger().get(acc)
+}
+```
+
+**Available methods:**
+- `ctx.storage()` - Access low-level storage
+- `ctx.model()` - Get generated storage model (read-only)
+
+**Use for:** Functions that don't modify state, callable via API
+
+### ProcContext - State-Modifying Transactions
+
+```rust
+fn transfer(ctx: &ProcContext, to: String, n: Integer) -> Result<(), Error> {
+    let from = ctx.signer().to_string();
+    // ... modify storage
+}
+```
+
+**Available methods:**
+- `ctx.signer()` - Transaction signer
+- `ctx.contract_signer()` - Contract's own address (for receiving tokens)
+- `ctx.storage()` - Access storage
+- `ctx.model()` - Get generated storage model (read-write)
+- `ctx.generate_id()` - Generate unique IDs
+- `ctx.view_context()` - Get read-only view
+
+**Use for:** Functions that modify state, called via blockchain transactions
+
+### FallContext - Fallback Handler
+
+```rust
+fn fallback(ctx: &FallContext, expr: String) -> String {
+    // Proxy to another contract
+    if let Some(addr) = ctx.view_context().model().contract_address() {
+        foreign::call(ctx.signer(), &addr, &expr)
+    } else {
+        "".to_string()
+    }
+}
+```
+
+**Available methods:**
+- `ctx.signer()` - Returns `Option<Signer>` (may be None for view calls)
+- `ctx.proc_context()` - Returns `Option<ProcContext>` (Some if called with signer)
+- `ctx.view_context()` - Always available
+
+**Use for:** Generic delegation and proxy patterns
+
+## WIT Files
+
+WIT (WebAssembly Interface Type) files define your contract's public interface.
+
+### Relationship to Rust Code
+
+- WIT files are **hand-written** by you
+- They define the **public API** of your contract
+- Every exported function in WIT must be implemented in Rust
+- The `contract!` macro generates Rust types from your WIT
+
+### Example WIT File
+
+```wit
+package root:component;
+
+world root {
+  // Include built-in types and interfaces
+  include kontor:built-in/built-in;
+
+  // Import specific types you'll use
+  use kontor:built-in/context.{view-context, proc-context};
+  use kontor:built-in/numbers.{integer};
+  use kontor:built-in/error.{error};
+
+  // Export functions (your contract's API)
+  export init: func(ctx: borrow<proc-context>);
+  export mint: func(ctx: borrow<proc-context>, n: integer);
+  export transfer: func(ctx: borrow<proc-context>, to: string, n: integer) -> result<_, error>;
+  export balance: func(ctx: borrow<view-context>, acc: string) -> option<integer>;
+}
+```
+
+### Built-in WIT Interfaces
+
+The `kontor:built-in` package provides:
+
+- **`context`** - Storage and execution context (ViewContext, ProcContext, FallContext)
+- **`numbers`** - Arbitrary precision Integer and Decimal types
+- **`error`** - Error type with variants (Message, Overflow, DivByZero, SyntaxError)
+- **`crypto`** - Hash functions
+- **`foreign`** - Cross-contract calls
+
+See `core/indexer/src/runtime/wit/deps/built-in.wit` for complete reference.
+
+## Module Organization
+
+### Workspace Structure
+
+Contracts are organized in a Cargo workspace:
+
+```toml
+[workspace]
+members = ["token", "amm", "pool"]
+resolver = "2"
+
+[workspace.dependencies]
+wit-bindgen = "=0.47.0"
+stdlib = { path = "../core/stdlib" }
+```
+
+### One Contract Per Crate
+
+Each contract is a separate Rust crate with:
+- `Cargo.toml` - Dependencies and build config
+- `src/lib.rs` - Contract implementation
+- `wit/contract.wit` - Interface definition
+- `wit/deps/` - Symlink to built-in types
+
+### Build Configuration
+
+**Cargo.toml:**
+```toml
+[lib]
+crate-type = ["cdylib"]  # Required for WASM
+
+[dependencies]
+wit-bindgen = "=0.47.0"  # Must be exact version
+stdlib = { path = "../core/stdlib" }
+```
+
+**.cargo/config.toml:**
+```toml
+[build]
+target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=-simd128"]
+```
+
+## Hooks
+
+Sigil defines specific function names that serve as hooks:
+
+### init Hook
+
+```rust
+fn init(ctx: &ProcContext) {
+    MyStorage::default().init(ctx);
+}
+```
+
+**Called when:**
+- Contract is first deployed (publish transaction)
+- Automatically by the runtime
+
+**Use for:**
+- Setting initial storage values
+- Contract initialization logic
+- Data migrations for upgrades
+
+### fallback Hook
+
+```rust
+fn fallback(ctx: &FallContext, expr: String) -> String {
+    // Handle calls to non-existent functions
+}
+```
+
+**Called when:**
+- A function is called that doesn't exist
+- Primarily for proxy contracts
+
+**Use for:**
+- Implementing proxy patterns
+- Version upgrades
+- Generic delegation
+
+## Quick Reference
+
+### Context Types
+
+**ProcContext**
+- Enables state-modifying operations, such as balance transfers
+- Provides write access to storage and signer access via `ctx.signer()`
+- Used in functions like `mint` or `transfer` to update blockchain state
+
+**ViewContext**
+- Supports read-only queries for inspecting contract state
+- Restricts access to read-only storage operations, no signer or mutations allowed
+- Used in functions like `balance` for retrieving data without modifying the blockchain
+
+**FallContext**
+- Manages unmatched calls via the `fallback` hook, enabling proxy patterns
+- Converts to `ViewContext` or `Option<ProcContext>` for storage reads
+- Exclusive to the `fallback` function for dynamic routing
+
+### Context Traits (for helper functions)
+
+**WriteContext**
+- For mutation logic (e.g., internal updates)
+- Implemented only by `ProcContext`
+
+**ReadContext**
+- For read-only logic (e.g., internal queries)
+- Implemented by both `ViewContext` and `ProcContext`, enabling shared read operations
+
+### Storage
+
+**StorageRoot**
+- Marks the root struct or enum for contract storage
+
+**Map&lt;Key, Value&gt;**
+- Key-value store for collections (e.g., account balances)
+- Supports `get`, `set`, and `keys` methods
+
+**Storage Access**
+- `ctx.model()` - Returns the typed storage model
+- Field accessors (e.g., `ctx.model().ledger()`) - Provide structured access
+- Get/set methods - No ctx parameter needed (e.g., `ledger.get(&key)`, `ledger.set(key, value)`)
+
+### Signer Access
+
+- `ctx.signer()` - Retrieves the transaction signer (ProcContext only)
+- `ctx.contract_signer()` - Returns the contract's own address (for receiving tokens)
+
+### Cross-Contract Calls
+
+**Static imports:**
+```rust
+import!(name = "token", height = 12345, tx_index = 0, path = "path/to/wit");
+// Direct calls: token::transfer(...)
+```
+
+**Dynamic interfaces:**
+```rust
+interface!(name = "token_dyn", path = "path/to/wit");
+// Dynamic calls with address: token_dyn::transfer(&address, ...)
+```
+
+### Utilities
+
+**crypto::generate_id() -> String**
+- Generates unique IDs for entities (e.g., account IDs)
+
+**crypto::hash(String) -> (String, Vec<u8>)**
+- Applies sha256 hash and returns hex encoded string and raw bytes
+
+**crypto::hash_with_salt(data: String, salt: String) -> (String, Vec<u8>)**
+- Applies sha256 hash to string concatenated with salt
+
+### Error Type
+
+```rust
+enum Error {
+    Message(String),      // Custom error messages
+    Overflow(String),     // Arithmetic overflow
+    DivByZero(String),    // Division by zero
+    SyntaxError(String),  // Syntax errors
+}
+```
+
+### Macros
+
+**contract!(name = "name")**
+- Defines contract name and generates boilerplate code from WIT file
+
+**import!(name, height, tx_index, path)**
+- Statically imports another contract's WIT for cross-contract calls
+
+**interface!(name, path)**
+- Defines dynamic interface for runtime contract calls with dynamic addresses
+

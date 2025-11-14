@@ -3,45 +3,44 @@ sidebar_position: 3
 title: 3. Shared Account
 ---
 
-# Shared Account
-
-
 <Note>
 **Full working code**: The complete source code for this example is available in [`example-contracts/shared-account/`](https://github.com/KontorProtocol/Documentation/tree/main/example-contracts/shared-account)
 </Note>
+
 This example demonstrates a simple multi-tenant shared account introducing static contract imports, complex storage structs, authorization logic, ID generation, and cross-contract calls.
 
 ## WIT Interface
-- `open`: Creates an account with a deposit and tenants, returning an ID or error
-- `deposit`/`withdraw`: Modifies the account balance
-- `balance`: Queries the account balance
-- `tenants`: Lists account participants
+
+Exports functions for multi-tenant account management with token deposits and withdrawals:
 
 ```wit
-package kontor:contract;
+package root:component;
 
-world contract {
-    include kontor:built-in/built-in;
-    use kontor:built-in/context.{view-context, proc-context, signer};
-    use kontor:built-in/error.{error};
-    use kontor:built-in/numbers.{integer, decimal};
+world root {
+  include kontor:built-in/built-in;
+  use kontor:built-in/context.{view-context, proc-context, signer};
+  use kontor:built-in/error.{error};
+  use kontor:built-in/foreign.{contract-address};
+  use kontor:built-in/numbers.{integer, decimal};
 
-    export init: func(ctx: borrow<proc-context>);
+  export init: func(ctx: borrow<proc-context>);
 
-    export open: func(ctx: borrow<proc-context>, n: integer, other-tenants: list<string>) -> result<string, error>;
+  export open: func(ctx: borrow<proc-context>, token: contract-address, n: integer, other-tenants: list<string>) -> result<string, error>;
 
-    export deposit: func(ctx: borrow<proc-context>, account-id: string, n: integer) -> result<_, error>;
+  export deposit: func(ctx: borrow<proc-context>, token: contract-address, account-id: string, n: integer) -> result<_, error>;
 
-    export withdraw: func(ctx: borrow<proc-context>, account-id: string, n: integer) -> result<_, error>;
+  export withdraw: func(ctx: borrow<proc-context>, token: contract-address, account-id: string, n: integer) -> result<_, error>;
 
-    export balance: func(ctx: borrow<view-context>, account-id: string) -> option<integer>;
+  export balance: func(ctx: borrow<view-context>, account-id: string) -> option<integer>;
 
-    export tenants: func(ctx: borrow<view-context>, account-id: string) -> option<list<string>>;
+  export token-balance: func(ctx: borrow<view-context>, token: contract-address, holder: string) -> option<integer>;
+
+  export tenants: func(ctx: borrow<view-context>, account-id: string) -> option<list<string>>;
 }
 ```
 
 ## Rust Implementation
-- The `import!` macro generates an interface for cross-contract calls to the `token` contract, as seen in the test environment previously.
+- The `interface!` macro generates an interface for cross-contract calls to the `token` contract with a dynamic address (passed as a parameter). Use `import!` when the dependency contract has been previously published and the contract address is known at compile time.
 - The `StorageRoot` macro, used for the root storage type, and the `Storage` macro, used for nested storage types in the `Account` struct, enable persistent storage.
 - `other_tenants` uses `Map<String, bool>` because the storage layer does not currently support list types, and `Map` provides a limited interface with the `keys` method for iteration. Even with a `List` type using a `Map` here could make sense. Instead of `bool` an `enum` or `struct` that defines the their "role" in the account could be written.
 - `authorized` Verifies procedure permissions
@@ -54,12 +53,7 @@ use stdlib::*;
 
 contract!(name = "shared-account");
 
-import!(
-    name = "token",
-    height = 0,
-    tx_index = 0,
-    path = "../token/contract/wit"
-);
+interface!(name = "token", path = "../token/contract/wit");
 
 #[derive(Clone, Default, Storage)]
 struct Account {
@@ -73,24 +67,24 @@ struct SharedAccountStorage {
     pub accounts: Map<String, Account>,
 }
 
-fn authorized(ctx: &ProcContext, account: &AccountWrapper) -> bool {
-    account.owner(ctx) == ctx.signer().to_string()
+fn authorized(signer: &Signer, account: &AccountModel) -> bool {
+    account.owner() == signer.to_string()
         || account
             .other_tenants()
-            .get(ctx, ctx.signer().to_string())
+            .get(signer.to_string())
             .is_some_and(|b| b)
 }
 
 fn insufficient_balance_error() -> Error {
-    Error::new("insufficient balance")
+    Error::Message("insufficient balance".to_string())
 }
 
 fn unauthorized_error() -> Error {
-    Error::new("unauthorized")
+    Error::Message("unauthorized".to_string())
 }
 
 fn unknown_error() -> Error {
-    Error::new("unknown account")
+    Error::Message("unknown account".to_string())
 }
 
 impl Guest for SharedAccount {
@@ -98,15 +92,20 @@ impl Guest for SharedAccount {
         SharedAccountStorage::default().init(ctx);
     }
 
-    fn open(ctx: &ProcContext, n: Integer, other_tenants: Vec<String>) -> Result<String, Error> {
+    fn open(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        n: Integer,
+        other_tenants: Vec<String>,
+    ) -> Result<String, Error> {
+        let signer = ctx.signer();
         let balance =
-            token::balance(&ctx.signer().to_string()).ok_or(insufficient_balance_error())?;
+            token::balance(&token, &signer.to_string()).ok_or(insufficient_balance_error())?;
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        let account_id = crypto::generate_id();
-        storage(ctx).accounts().set(
-            ctx,
+        let account_id = ctx.generate_id();
+        ctx.model().accounts().set(
             account_id.clone(),
             Account {
                 balance: n,
@@ -119,154 +118,172 @@ impl Guest for SharedAccount {
                 ),
             },
         );
-        token::transfer(ctx.signer(), &ctx.contract_signer().to_string(), n)?;
+        token::transfer(&token, signer, &ctx.contract_signer().to_string(), n)?;
         Ok(account_id)
     }
 
-    fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
+    fn deposit(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        account_id: String,
+        n: Integer,
+    ) -> Result<(), Error> {
+        let signer = ctx.signer();
         let balance =
-            token::balance(&ctx.signer().to_string()).ok_or(insufficient_balance_error())?;
+            token::balance(&token, &signer.to_string()).ok_or(insufficient_balance_error())?;
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        let account = storage(ctx)
+        let account = ctx
+            .model()
             .accounts()
-            .get(ctx, account_id)
+            .get(account_id)
             .ok_or(unknown_error())?;
-        if !authorized(ctx, &account) {
+        if !authorized(&signer, &account) {
             return Err(unauthorized_error());
         }
-        account.set_balance(ctx, account.balance(ctx) + n);
-        token::transfer(ctx.signer(), &ctx.contract_signer().to_string(), n)
+        account.update_balance(|b| b + n);
+        token::transfer(&token, signer, &ctx.contract_signer().to_string(), n)
     }
 
-    fn withdraw(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
-        let account = storage(ctx)
+    fn withdraw(
+        ctx: &ProcContext,
+        token: ContractAddress,
+        account_id: String,
+        n: Integer,
+    ) -> Result<(), Error> {
+        let signer = ctx.signer();
+        let account = ctx
+            .model()
             .accounts()
-            .get(ctx, account_id)
+            .get(account_id)
             .ok_or(unknown_error())?;
-        if !authorized(ctx, &account) {
+        if !authorized(&signer, &account) {
             return Err(unauthorized_error());
         }
-        let balance = account.balance(ctx);
+        let balance = account.balance();
         if balance < n {
             return Err(insufficient_balance_error());
         }
-        account.set_balance(ctx, balance - n);
-        token::transfer(ctx.contract_signer(), &ctx.signer().to_string(), n)
+        account.set_balance(balance - n);
+        token::transfer(&token, ctx.contract_signer(), &signer.to_string(), n)
     }
 
     fn balance(ctx: &ViewContext, account_id: String) -> Option<Integer> {
-        storage(ctx)
-            .accounts()
-            .get(ctx, account_id)
-            .map(|a| a.balance(ctx))
+        ctx.model().accounts().get(account_id).map(|a| a.balance())
+    }
+
+    fn token_balance(
+        _ctx: &ViewContext,
+        token: ContractAddress,
+        holder: String,
+    ) -> Option<Integer> {
+        token::balance(&token, &holder)
     }
 
     fn tenants(ctx: &ViewContext, account_id: String) -> Option<Vec<String>> {
-        storage(ctx).accounts().get(ctx, account_id).map(|a| {
-            [a.owner(ctx)]
+        ctx.model().accounts().get(account_id).map(|a| {
+            [a.owner()]
                 .into_iter()
-                .chain(a.other_tenants().keys(ctx))
+                .chain(a.other_tenants().keys())
                 .collect()
         })
     }
 }
 ```
 
+**Key points:**
+- Uses `interface!` not `import!` for dynamic token contract address
+- `ctx.model()` for storage access
+- Map operations: `accounts().get(id)` returns `Option<AccountModel>`
+- Nested struct updates: `account.update_balance(|b| b + n)`
+- Error helpers return `Error::Message(...to_string())`
+- `authorized()` function takes `&AccountModel` not `&AccountWrapper`
+- `ctx.generate_id()` creates unique account IDs
+- Calls `token::balance()` and `token::transfer()` with contract addresses
+
 ## Testing
-- The `import!` macro generates interfaces for both the `shared-account` and `token` contracts. Although the test primarily interacts with the `token` contract through `shared-account` calls, it must first `mint` tokens.
-- `dep_contract_bytes` loads the WebAssembly bytes for the "imported" `token` contract.
+
+The test demonstrates creating accounts, depositing, withdrawing, and testing authorization:
 
 ```rust
 #[cfg(test)]
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "shared-account",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "token", path = "../token/contract/wit");
+    interface!(name = "shared-account");
 
-    import!(
-        name = "token",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+    #[testlib::test]
+    async fn test_shared_account_contract() -> Result<()> {
+        let alice = runtime.identity().await?;
+        let bob = runtime.identity().await?;
+        let claire = runtime.identity().await?;
+        let dara = runtime.identity().await?;
 
-    #[tokio::test]
-    async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("shared-account", &contract_bytes().await?),
-                    ("token", &dep_contract_bytes("token").await?),
-                ])
-                .build(),
+        let token = runtime.publish(&alice, "token").await?;
+        let shared_account = runtime.publish(&alice, "shared-account").await?;
+
+        token::mint(runtime, &token, &alice, 100.into()).await??;
+
+        let account_id = shared_account::open(
+            runtime,
+            &shared_account,
+            &alice,
+            token.clone(),
+            50.into(),
+            vec![&bob, &dara],
         )
-        .await?;
+        .await??;
 
-        let alice = "alice";
-        let bob = "bob";
-        let claire = "claire";
-        let dara = "dara";
-
-        token::mint(&runtime, alice, 100.into()).await?;
-
-        let account_id =
-            shared_account::open(&runtime, alice, 50.into(), vec![bob, dara]).await??;
-
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        shared_account::deposit(&runtime, alice, &account_id, 25.into()).await??;
+        shared_account::deposit(runtime, &shared_account, &alice, token.clone(), &account_id, 25.into())
+            .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(75.into()));
 
-        shared_account::withdraw(&runtime, bob, &account_id, 25.into()).await??;
+        shared_account::withdraw(runtime, &shared_account, &bob, token.clone(), &account_id, 25.into())
+            .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(50.into()));
 
-        shared_account::withdraw(&runtime, alice, &account_id, 50.into()).await??;
+        shared_account::withdraw(runtime, &shared_account, &alice, token.clone(), &account_id, 50.into())
+            .await??;
 
-        let result = shared_account::balance(&runtime, &account_id).await?;
+        let result = shared_account::balance(runtime, &shared_account, &account_id).await?;
         assert_eq!(result, Some(0.into()));
 
-        let result = shared_account::withdraw(&runtime, bob, &account_id, 1.into()).await?;
-        assert_eq!(result, Err(Error::new("insufficient balance")));
-
-        let result = shared_account::withdraw(&runtime, claire, &account_id, 1.into()).await?;
-        assert_eq!(result, Err(Error::new("unauthorized")));
-
-        let result = shared_account::tenants(&runtime, &account_id).await?;
+        let result = shared_account::withdraw(runtime, &shared_account, &bob, token.clone(), &account_id, 1.into())
+            .await?;
         assert_eq!(
             result,
-            Some(vec![alice.to_string(), bob.to_string(), dara.to_string()])
+            Err(Error::Message("insufficient balance".to_string()))
         );
+
+        let result = shared_account::withdraw(runtime, &shared_account, &claire, token.clone(), &account_id, 1.into())
+            .await?;
+        assert_eq!(result, Err(Error::Message("unauthorized".to_string())));
+
+        let result =
+            shared_account::token_balance(runtime, &shared_account, token.clone(), &alice).await?;
+        assert_eq!(result, Some(75.into()));
+
+        let result = token::balance(runtime, &token, &bob).await?;
+        assert_eq!(result, Some(25.into()));
+
+        let result = shared_account::tenants(runtime, &shared_account, &account_id)
+            .await?
+            .unwrap();
+        assert_eq!(result.iter().len(), 3);
+        assert!(result.contains(&alice.to_string()));
+        assert!(result.contains(&dara.to_string()));
+        assert!(result.contains(&bob.to_string()));
 
         Ok(())
     }
 }
-```
-
-## Dependencies
-Adding the `token-test` dependency to the `token/test/Cargo.toml` file causes `cargo test` or `cargo build` commands in `shared-account` to trigger builds in `token` so the compiled wasm file is available for use in this context.
-
-```toml
-[package]
-name = "shared-account-test"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-testlib = { workspace = true }
-stdlib = { workspace = true }
-tokio = { workspace = true }
-
-token-test = { path = "../../token/test" }
 ```

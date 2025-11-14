@@ -3,12 +3,11 @@ sidebar_position: 6
 title: 6. Automated Market-Maker (AMM)
 ---
 
-# AMM
-This example builds on top of the Token contract and demonstrates swaps and liquidity provision on an AMM. It demonstrates transfers of balances using the `token-dyn` interface for cross-contract calls to the Token contract, and complex integer arithmetic using the 256-bit `Integer` built-in type.
-
 <Note>
 **Full working code**: The complete source code for this example is available in [`example-contracts/amm/`](https://github.com/KontorProtocol/Documentation/tree/main/example-contracts/amm)
 </Note>
+
+This example builds on top of the Token contract and demonstrates swaps and liquidity provision on an AMM. It demonstrates transfers of balances using the `token-dyn` interface for cross-contract calls to the Token contract, and complex integer arithmetic using the 256-bit `Integer` built-in type.
 
 ## WIT Interface
 Imports types:
@@ -30,9 +29,9 @@ and exports functions:
 - `quote-swap`: Receive a quote of out-tokens received when swapping
 
 ```wit
-package kontor:contract;
+package root:component;
 
-world contract {
+world root {
     include kontor:built-in/built-in;
     use kontor:built-in/context.{view-context, proc-context, signer};
     use kontor:built-in/error.{error};
@@ -169,9 +168,9 @@ fn calc_swap_result(
 
 fn get_pool(ctx: &impl ReadContext, pair: &TokenPair) -> Result<PoolWrapper, Error> {
     let id = pair_id(pair);
-    let pools = storage(ctx).pools();
+    let pools = ctx.model().pools();
     pools
-        .get(ctx, &id)
+        .get(&id)
         .ok_or_else(|| Error::Message("Pool not found".to_string()))
 }
 
@@ -183,11 +182,11 @@ fn quote_swap(
 ) -> Result<Integer, Error> {
     let pool = get_pool(ctx, pair)?;
     let (bal_in, bal_out) = if token_in == &pair.a {
-        (pool.balance_a(ctx), pool.balance_b(ctx))
+        (pool.balance_a(), pool.balance_b())
     } else {
-        (pool.balance_b(ctx), pool.balance_a(ctx))
+        (pool.balance_b(), pool.balance_a())
     };
-    calc_swap_result(amount_in, bal_in, bal_out, pool.fee_bps(ctx))
+    calc_swap_result(amount_in, bal_in, bal_out, pool.fee_bps())
 }
 
 fn quote_deposit(
@@ -199,9 +198,9 @@ fn quote_deposit(
     validate_amount(amount_a)?;
     validate_amount(amount_b)?;
 
-    let lp_supply = pool.lp_total_supply(ctx);
-    let balance_a = pool.balance_a(ctx);
-    let balance_b = pool.balance_b(ctx);
+    let lp_supply = pool.lp_total_supply();
+    let balance_a = pool.balance_a();
+    let balance_b = pool.balance_b();
     let lp_shares = if amount_a * balance_b < amount_b * balance_a {
         amount_a * lp_supply / balance_a
     } else {
@@ -223,10 +222,10 @@ fn quote_withdraw(
 ) -> Result<WithdrawResult, Error> {
     validate_amount(shares)?;
 
-    let lp_total_supply = pool.lp_total_supply(ctx);
+    let lp_total_supply = pool.lp_total_supply();
     Ok(WithdrawResult {
-        amount_a: shares * pool.balance_a(ctx) / lp_total_supply,
-        amount_b: shares * pool.balance_b(ctx) / lp_total_supply,
+        amount_a: shares * pool.balance_a() / lp_total_supply,
+        amount_b: shares * pool.balance_b() / lp_total_supply,
     })
 }
 
@@ -262,8 +261,7 @@ impl Guest for Amm {
         let lp_shares = (amount_a * amount_b).sqrt()?;
 
         let admin = ctx.signer().to_string();
-        storage(ctx).pools().set(
-            ctx,
+        ctx.model().pools().set(
             pair_id(&pair),
             Pool {
                 token_a: pair.a.clone(),
@@ -284,13 +282,13 @@ impl Guest for Amm {
     }
 
     fn fee(ctx: &ViewContext, pair: TokenPair) -> Result<Integer, Error> {
-        Ok(get_pool(ctx, &pair)?.fee_bps(ctx))
+        Ok(get_pool(ctx, &pair)?.fee_bps())
     }
 
     fn balance(ctx: &ViewContext, pair: TokenPair, acc: String) -> Option<Integer> {
         get_pool(ctx, &pair)
             .ok()
-            .and_then(|p| p.lp_ledger().get(ctx, acc))
+            .and_then(|p| p.lp_ledger().get(acc))
     }
 
     fn token_balance(
@@ -301,9 +299,9 @@ impl Guest for Amm {
         pair_other_token(&pair, &token)?;
         let pool = get_pool(ctx, &pair)?;
         if token == pair.a {
-            Ok(pool.balance_a(ctx))
+            Ok(pool.balance_a())
         } else {
-            Ok(pool.balance_b(ctx))
+            Ok(pool.balance_b())
         }
     }
 
@@ -325,14 +323,14 @@ impl Guest for Amm {
         let pool = get_pool(ctx, &pair)?;
         let res = quote_deposit(ctx, &pool, amount_a, amount_b)?;
         let ledger = pool.lp_ledger();
-        let addr = storage(ctx).custodian(ctx);
-        pool.set_balance_a(ctx, pool.balance_a(ctx) + res.deposit_a);
-        pool.set_balance_b(ctx, pool.balance_b(ctx) + res.deposit_b);
+        let addr = ctx.model().custodian();
+        pool.update_balance_a(|b| b + res.deposit_a);
+        pool.update_balance_b(|b| b + res.deposit_b);
 
         let user = ctx.signer().to_string();
-        let bal = ledger.get(ctx, &user).unwrap_or_default();
-        ledger.set(ctx, user, bal + res.lp_shares);
-        pool.set_lp_total_supply(ctx, pool.lp_total_supply(ctx) + res.lp_shares);
+        let bal = ledger.get(&user).unwrap_or_default();
+        ledger.set(user, bal + res.lp_shares);
+        pool.set_lp_total_supply(pool.lp_total_supply() + res.lp_shares);
 
         token_dyn::transfer(&pair.a, ctx.signer(), &addr, res.deposit_a)?;
         token_dyn::transfer(&pair.b, ctx.signer(), &addr, res.deposit_b)?;
@@ -359,8 +357,8 @@ impl Guest for Amm {
         let ledger = pool.lp_ledger();
         let user = ctx.signer().to_string();
 
-        let total = pool.lp_total_supply(ctx);
-        let bal = ledger.get(ctx, &user).unwrap_or_default();
+        let total = pool.lp_total_supply();
+        let bal = ledger.get(&user).unwrap_or_default();
 
         if total < shares {
             return Err(Error::Message("insufficient total supply".to_string()));
@@ -369,10 +367,10 @@ impl Guest for Amm {
             return Err(Error::Message("insufficient share balance".to_string()));
         }
 
-        ledger.set(ctx, user.clone(), bal - shares);
-        pool.set_lp_total_supply(ctx, total - shares);
-        pool.set_balance_a(ctx, pool.balance_a(ctx) - res.amount_a);
-        pool.set_balance_b(ctx, pool.balance_b(ctx) - res.amount_b);
+        ledger.set(user.clone(), bal - shares);
+        pool.set_lp_total_supply(total - shares);
+        pool.update_balance_a(|b| b - res.amount_a);
+        pool.update_balance_b(|b| b - res.amount_b);
 
         token_dyn::transfer(&pair.a, ctx.contract_signer(), &user, res.amount_a)?;
         token_dyn::transfer(&pair.b, ctx.contract_signer(), &user, res.amount_b)?;
@@ -408,17 +406,17 @@ impl Guest for Amm {
 
         let pool = get_pool(ctx, &pair)?;
         if token_in == pair.a {
-            pool.set_balance_a(ctx, pool.balance_a(ctx) + amount_in);
-            pool.set_balance_b(ctx, pool.balance_b(ctx) - amount_out);
+            pool.update_balance_a(|b| b + amount_in);
+            pool.update_balance_b(|b| b - amount_out);
         } else {
-            pool.set_balance_a(ctx, pool.balance_a(ctx) - amount_out);
-            pool.set_balance_b(ctx, pool.balance_b(ctx) + amount_in);
+            pool.update_balance_a(|b| b - amount_out);
+            pool.update_balance_b(|b| b + amount_in);
         }
 
         token_dyn::transfer(
             &token_in,
             ctx.signer(),
-            &storage(ctx).custodian(ctx),
+            &ctx.model().custodian(),
             amount_in,
         )?;
         token_dyn::transfer(
@@ -434,9 +432,9 @@ impl Guest for Amm {
 ```
 
 ## Testing
-Similar to the tests for other contracts, this one uses the `import!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
+Similar to the tests for other contracts, this one uses the `interface!` macro to generate an interface for calling the contract. It also includes assertions for error handling. For all calls, the first `?` operator checks whether the runtime threw an error during execution. For contract functions that explicitly return a `Result`, the result can be "unwrapped" with an additional `?` operator or left omitted to make an assertion on an error.
 
-In addition to importing the `amm` contract, three tokens are instantiated by the `token` contract, and we import the `token-dyn` interface for dynamic cross-contract calls.
+The test publishes three contracts: the `amm` contract and two separate instances of the `token` contract to serve as the trading pair.
 
 When working with numbers in Sigil, either the `Integer` or `Decimal` types should be used. `From` instances have been implemented for many of the primitive types which is why there are many `<num>.into()`s in the test. One can also write: `Integer::from(100)`, or `Decimal::from("1.5")`, or even `let x: Decimal = 1.5.into()`, etc.
 
@@ -445,67 +443,33 @@ When working with numbers in Sigil, either the `Integer` or `Decimal` types shou
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "token-a",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
+    interface!(name = "amm");
+    interface!(name = "token_a", path = "../token/contract/wit");
+    interface!(name = "token_b", path = "../token/contract/wit");
 
-    import!(
-        name = "token-b",
-        height = 0,
-        tx_index = 0,
-        path = "../token/contract/wit",
-    );
-
-    import!(
-        name = "amm",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
-
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[
-                    ("amm", &contract_bytes().await?),
-                    ("token-a", &dep_contract_bytes("token").await?),
-                    ("token-b", &dep_contract_bytes("token").await?),
-                ])
-                .build(),
-        )
-        .await?;
+        let admin = runtime.identity().await?;
+        let minter = runtime.identity().await?;
 
-        let token_a = ContractAddress {
-            name: "token-a".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        let amm = runtime.publish(&admin, "amm").await?;
+        let token_a = runtime.publish(&admin, "token").await?;
+        let token_b = runtime.publish(&admin, "token").await?;
 
-        let token_b = ContractAddress {
-            name: "token-b".to_string(),
-            height: 0,
-            tx_index: 0,
-        };
+        token_a::mint(runtime, &token_a, &minter, 1000.into()).await??;
+        token_b::mint(runtime, &token_b, &minter, 1000.into()).await??;
 
-        let admin = "test_admin";
-        let minter = "test_minter";
-        token_a::mint(&runtime, minter, 1000.into()).await?;
-        token_b::mint(&runtime, minter, 1000.into()).await?;
-
-        token_a::transfer(&runtime, minter, admin, 100.into()).await??;
-        token_b::transfer(&runtime, minter, admin, 500.into()).await??;
+        token_a::transfer(runtime, &token_a, &minter, &admin, 100.into()).await??;
+        token_b::transfer(runtime, &token_b, &minter, &admin, 500.into()).await??;
 
         let pair = amm::TokenPair {
             a: token_a.clone(),
             b: token_b.clone(),
         };
         let res = amm::create(
-            &runtime,
-            admin,
+            runtime,
+            &amm,
+            &admin,
             pair.clone(),
             100.into(),
             500.into(),
@@ -514,24 +478,25 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(223.into()));
 
-        let bal_a = amm::token_balance(&runtime, pair.clone(), token_a.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
         assert_eq!(bal_a, Ok(100.into()));
-        let bal_b = amm::token_balance(&runtime, pair.clone(), token_b.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         assert_eq!(bal_b, Ok(500.into()));
         let k1 = bal_a.unwrap() * bal_b.unwrap();
 
-        let res = amm::quote_swap(&runtime, pair.clone(), token_a.clone(), 10.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 10.into()).await?;
         assert_eq!(res, Ok(45.into()));
 
-        let res = amm::quote_swap(&runtime, pair.clone(), token_a.clone(), 100.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 100.into()).await?;
         assert_eq!(res, Ok(250.into()));
 
-        let res = amm::quote_swap(&runtime, pair.clone(), token_a.clone(), 1000.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_a.clone(), 1000.into()).await?;
         assert_eq!(res, Ok(454.into()));
 
         let res = amm::swap(
-            &runtime,
-            minter,
+            runtime,
+            &amm,
+            &minter,
             pair.clone(),
             token_a.clone(),
             10.into(),
@@ -541,8 +506,9 @@ mod tests {
         assert!(res.is_err()); // below minimum
 
         let res = amm::swap(
-            &runtime,
-            minter,
+            runtime,
+            &amm,
+            &minter,
             pair.clone(),
             token_a.clone(),
             10.into(),
@@ -551,16 +517,17 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(45.into()));
 
-        let bal_a = amm::token_balance(&runtime, pair.clone(), token_a.clone()).await?;
-        let bal_b = amm::token_balance(&runtime, pair.clone(), token_b.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         let k2 = bal_a.unwrap() * bal_b.unwrap();
         assert!(k2 >= k1);
 
-        let res = amm::quote_swap(&runtime, pair.clone(), token_b.clone(), 45.into()).await?;
+        let res = amm::quote_swap(runtime, &amm, pair.clone(), token_b.clone(), 45.into()).await?;
         assert_eq!(res, Ok(9.into()));
         let res = amm::swap(
-            &runtime,
-            minter,
+            runtime,
+            &amm,
+            &minter,
             pair.clone(),
             token_b.clone(),
             45.into(),
@@ -569,8 +536,8 @@ mod tests {
         .await?;
         assert_eq!(res, Ok(9.into()));
 
-        let bal_a = amm::token_balance(&runtime, pair.clone(), token_a.clone()).await?;
-        let bal_b = amm::token_balance(&runtime, pair.clone(), token_b.clone()).await?;
+        let bal_a = amm::token_balance(runtime, &amm, pair.clone(), token_a.clone()).await?;
+        let bal_b = amm::token_balance(runtime, &amm, pair.clone(), token_b.clone()).await?;
         let k3 = bal_a.unwrap() * bal_b.unwrap();
         assert!(k3 >= k2);
 

@@ -50,50 +50,43 @@
         "docs/introduction/core-concepts",
         "docs/introduction/architecture",
         "docs/introduction/security"
-        // Future: "docs/introduction/use-cases" - What can you build with Kontor?
       ]
     },
     {
       "group": "Basics",
       "pages": [
         "docs/sigil/introduction",
-        "docs/sigil/architecture",
-        "docs/sigil/getting-started"
-        // Future: "docs/sigil/quickstart" - Complete tutorial: deploy your first contract
+        "docs/sigil/quickstart",
+        "docs/sigil/architecture"
       ]
     },
-    // Future group: "Guides" 
-    // - "docs/sigil/guides/contract-structure" - Anatomy of a Sigil contract
-    // - "docs/sigil/guides/storage-patterns" - Working with state
-    // - "docs/sigil/guides/cross-contract-calls" - Contract composability
-    // - "docs/sigil/guides/testing" - Unit and integration testing
-    // - "docs/sigil/guides/gas-optimization" - Optimizing gas costs
+    {
+      "group": "Reference",
+      "pages": [
+        "docs/sigil/reference/contract-structure",
+        "docs/sigil/reference/storage",
+        "docs/sigil/reference/cross-contract-calls",
+        "docs/sigil/reference/error-handling",
+        "docs/sigil/reference/numbers",
+        "docs/sigil/reference/testing"
+      ]
+    },
     {
       "group": "Examples",
       "pages": [
-        // Future: "docs/sigil/examples/index" - Examples overview and learning path
+        "docs/sigil/examples/index",
         "docs/sigil/examples/hello-world",
         "docs/sigil/examples/token",
         "docs/sigil/examples/shared-account",
-        "docs/sigil/examples/shared-account-dynamic",
         "docs/sigil/examples/proxy",
         "docs/sigil/examples/amm",
         "docs/sigil/examples/pool"
       ]
     },
     {
-      "group": "Reference",
-      "pages": [
-        "docs/sigil/reference/implementation",
-        "docs/sigil/reference/testing",
-        "docs/sigil/reference/numerics"
-      ]
-    },
-    {
       "group": "Economics",
       "pages": [
         "docs/economics/introduction",
-        "docs/resources/economic-model",
         "docs/economics/perpetual",
         "docs/economics/node-economics",
         "docs/economics/network-health",
@@ -105,29 +98,24 @@
       "group": "File Storage",
       "pages": [
         "docs/storage/introduction",
-        "docs/resources/storage-protocol",
-        // Future: "docs/storage/quickstart" - Tutorial: Store your first file
         "docs/storage/file-agreements",
         "docs/storage/challenge-response",
         "docs/storage/node-operations",
         "docs/storage/cryptographic-system",
         "docs/storage/sponsorship-markets",
         "docs/storage/storage-security"
-        // Future: "docs/storage/retrieval" - Guide: Retrieving files from storage nodes
-        // Future: "docs/storage/running-nodes" - Guide: Operating a storage node
-        // Future: "docs/storage/node-profitability" - Economics: Profitability analysis with examples
       ]
     },
     {
       "group": "Resources",
       "pages": [
-        "docs/resources/faq",
         "docs/resources/whitepaper",
         "docs/resources/economic-model",
         "docs/resources/storage-protocol",
         "docs/resources/alkanes",
         "docs/resources/brc2-0",
-        "docs/resources/move"
+        "docs/resources/move",
+        "docs/resources/faq"
       ]
     }
   ],

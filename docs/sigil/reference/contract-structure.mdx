@@ -311,10 +311,10 @@ interface!(name = "token_dyn", path = "path/to/wit");
 **crypto::generate_id() -> String**
 - Generates unique IDs for entities (e.g., account IDs)
 
-**crypto::hash(String) -> (String, Vec<u8>)**
+**crypto::hash(String) -> (String, Vec\<u8\>)**
 - Applies sha256 hash and returns hex encoded string and raw bytes
 
-**crypto::hash_with_salt(data: String, salt: String) -> (String, Vec<u8>)**
+**crypto::hash_with_salt(data: String, salt: String) -> (String, Vec\<u8\>)**
 - Applies sha256 hash to string concatenated with salt
 
 ### Error Type

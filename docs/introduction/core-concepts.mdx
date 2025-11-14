@@ -1,0 +1,83 @@
+---
+title: Core Concepts
+mode: wide
+---
+
+<div className="page-intro">
+Four fundamental concepts underpin how Kontor works: embedded consensus, the dual-token model, the hybrid UTXO model, and atomic swaps.
+</div>
+
+## Embedded Consensus
+
+As a metaprotocol on Bitcoin, Kontor uses "embedded consensus": it derives state from Bitcoin without implementing its own consensus mechanism. Bitcoin miners order transactions and secure them with proof-of-work; Kontor indexers process those transactions according to additional rules. Because Bitcoin provides an immutable, timestamped log of all Kontor operations, and because Kontor's execution rules are deterministic, every indexer processing the same Bitcoin history arrives at the same state.
+
+**There is no voting, no leader election, no validator set**—only deterministic computation over a shared input stream, called state-machine replication.
+
+**How indexers work:** Each Kontor indexer connects to Bitcoin via RPC, receiving blocks as they are mined. The indexer scans for Kontor transactions, identifies their type (contract deployment, contract call, file agreement, storage proof), and routes them to the appropriate handler. Smart contract calls execute in a sandboxed WebAssembly runtime. File operations manage metadata and proofs on-chain while coordinating with storage nodes for data distribution.
+
+The indexer uses a single-threaded event loop to maintain consistency—all state modifications flow through one thread with exclusive control of database writes. This eliminates concurrency issues. Contract state is stored in an append-only structure indexed by block height, making Bitcoin reorganizations straightforward to handle.
+
+**Security model:** You trust that Bitcoin's proof-of-work secures the ledger, and you trust that the indexer software correctly implements Kontor's rules. You don't trust "validators", "bridge operators", or "sequencers"—those don't exist in Kontor's architecture. Anyone can run their own indexer to independently verify protocol state.
+
+For architectural details, see [Architecture and Consensus](/docs/introduction/architecture).
+
+## Dual-Token Model: BTC and KOR
+
+Bitcoin was designed as sound, deflationary digital money with predictable scarcity. This makes BTC excellent as a store of value and medium of exchange—digital gold. However, using BTC for application-layer services creates fundamental problems. Some projects attempt to use BTC as "gas" for computational services or try to fund long-term data storage with one-time BTC payments. These approaches misunderstand what BTC is and create economic problems.
+
+Kontor addresses this by introducing KOR, a token with economic properties purpose-built for application-layer services—gas metering and storage incentives. This allows BTC to remain what it is (digital gold) while enabling the functionality that applications need.
+
+**BTC is digital gold, KOR is digital gasoline.** Gold's value comes from scarcity and durability—you hold it, you don't burn it. Gasoline's value comes from consumption—it powers activity, and its price reflects supply-and-demand balance. If gold were used as fuel, either it would be too expensive to use (making services uneconomical), or its consumption would be too high (destroying its monetary properties). The solution is to separate the store-of-value function from the utility function.
+
+**How it works in practice:**
+- BTC remains the unit of account—assets are priced in BTC, exchanges quote pairs against BTC, settlement happens in BTC
+- KOR is a metered input—users acquire what they need for immediate use through atomic swaps
+- Users pay both BTC fees (to miners for inclusion) and KOR fees (to the protocol for execution and storage)
+- The dual-token model ensures neither fee cannibalizes the other
+
+**Economic alignment with Bitcoin:** Every Kontor operation requires a Bitcoin transaction that pays Bitcoin miners. This is direct and unavoidable. The more successful Kontor becomes, the more valuable Bitcoin blockspace becomes. This stands in contrast to sidechains and rollups, which explicitly aim to move transaction volume off Bitcoin. Kontor's architecture is not parasitic—it strengthens Bitcoin's fee market and contributes to long-term security.
+
+For comprehensive economic analysis, see the [Economics](/docs/economics/introduction) section.
+
+## Hybrid UTXO Model
+
+Kontor uses a novel hybrid model where assets can exist in two states:
+
+**Attached state:** Assets are "attached" to Bitcoin UTXOs, making them tradeable using standard Bitcoin tools:
+- PSBTs (Partially Signed Bitcoin Transactions)
+- Bitcoin Script interactions
+- Native Bitcoin wallet support
+- Atomic swaps with other Bitcoin metaprotocol tokens
+
+**Detached state:** Assets are "detached" for use in smart contracts:
+- Held in contract state
+- Subject to programmable logic
+- Can be transferred between contracts
+- Can cross-contract call with type safety
+
+**Transitioning between states** happens through Bitcoin transactions, allowing assets to move fluidly between the "Bitcoin world" (UTXOs, PSBTs, swaps) and the "contract world" (stateful logic, DeFi protocols). All in single confirmations.
+
+This hybrid model gives Kontor unique interoperability—assets are first-class Bitcoin citizens while also supporting rich programmable logic. You don't have to choose between Bitcoin-native tooling and smart contract functionality.
+
+{/* TODO: Add detailed hybrid UTXO mechanics when implementation documentation is ready */}
+
+Kontor's hybrid model enables single-confirmation atomic swaps between BTC, KOR, and assets from other Bitcoin metaprotocols (Ordinals, Runes, Counterparty). Users can chain a BTC-to-KOR swap directly with a contract call in a single Bitcoin transaction, making interaction seamless.
+
+**Example flow:**
+1. User holds BTC, wants to call a Kontor contract (which requires KOR for gas)
+2. User constructs a Bitcoin transaction that atomically: swaps BTC → KOR, then calls the contract with KOR
+3. All happens in one transaction, one confirmation
+4. No pre-funding, no separate accounts, no bridges
+
+This atomic composability is what makes Kontor genuinely Bitcoin-native—any Bitcoin user can interact with Kontor applications immediately using standard Bitcoin addresses and wallets.
+
+{/* TODO: Add detailed atomic swap mechanics explanation when SDK is finalized */}
+
+---
+
+## Next Steps
+
+- Learn about [Smart Contracts](/docs/sigil/introduction) with the Sigil framework
+- Understand [File Storage](/docs/storage/introduction) and perpetual data availability
+- Explore the [Economic Model](/docs/economics/introduction) in depth
+

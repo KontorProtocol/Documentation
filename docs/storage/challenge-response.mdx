@@ -1,0 +1,70 @@
+---
+sidebar_position: 2
+title: Challenge and Response
+---
+
+The challenge-response mechanism is what makes trustless storage verification possible. Without it, rational storage nodes would delete data immediately and pocket rewards until caught. The protocol solves this by randomly auditing files and requiring nodes to prove cryptographically that they possess specific data at the moment of challenge.
+
+## Challenge Generation
+
+Each Bitcoin block, Kontor indexers deterministically derive a set of challenges from the block hash. The block hash provides unpredictable, high-entropy randomness that cannot be biased by miners (grinding attacks are economically irrational—the cost of discarding a valid block vastly exceeds any benefit from influencing which nodes are challenged). Using Bitcoin's proof-of-work as the randomness source ensures challenges are fair, verifiable, and impossible to predict in advance.
+
+**File selection.** Each file in the active set is selected for challenge with constant probability $p_f = C_{\text{target}} / B$ per block, where $C_{\text{target}} = 12$ is the target annual challenges per file and $B \approx 52,560$ is expected Bitcoin blocks per year. This creates approximately 12 challenges per file annually regardless of network size. The constant challenge rate provides consistent security guarantees as the network scales—a file stored in a network with 1,000 files receives the same audit frequency as one stored in a network with 1,000,000 files.
+
+**Node selection.** For each selected file, the protocol randomly chooses one of its storing nodes with uniform probability $1/|N_f|$ where $N_f$ is the set of nodes storing that file. This means nodes storing many copies of the same file don't gain advantage—each node has equal chance of being challenged regardless of how many other nodes store the file.
+
+**Challenge parameters.** The challenge specifies which file, which node, and which randomly-selected sectors must be proven. The protocol samples $s_{\text{chal}} = 100$ sectors uniformly at random from the file's Merkle tree (or all sectors if the file has fewer than 100). These sector indices are derived deterministically using domain-separated hashing of the block hash combined with the file identifier, ensuring indexers compute identical challenges while maintaining unpredictability.
+
+## Proof Submission
+
+The challenged node has approximately two weeks ($W_{\text{proof}} = 2016$ blocks) to generate and submit a proof. This window serves two purposes: it provides operational buffer for node maintenance and network issues, and it enables proof aggregation—nodes can batch multiple challenges from multiple files into a single Bitcoin transaction, dramatically reducing per-challenge proving costs.
+
+**Proof generation.** The node generates a Nova IVC (Incrementally Verifiable Computation) proof demonstrating possession of the challenged sectors. For each challenged sector, the proof verifies:
+1. The sector index was correctly derived from the challenge seed
+2. The node possesses the 31-byte symbol at that index
+3. A valid Merkle path connects that symbol to the public Merkle root
+
+The proof is constructed iteratively—each sector verification becomes one step in the recursive proof. Nova's folding scheme allows these steps to accumulate into a single proof structure that grows logarithmically with the number of steps, then compresses to constant size (around 10 kB) using Spartan compression. The final compressed proof is compact enough to include in a Bitcoin transaction with minimal overhead.
+
+**Multi-file aggregation.** Storage nodes can aggregate challenges across multiple files into a single proof transaction. The protocol constructs a File Ledger—a Merkle tree built over the root commitments of all files in the system. Each file has a canonical position in this ledger (determined by lexicographic file identifier ordering). When proving multiple files, the node includes Merkle paths from each file's root commitment to the ledger root, then proves all challenged sectors across all files in one aggregated IVC proof. This aggregation is what makes large-scale storage operations economical—a node storing thousands of files can batch weeks of challenges into a single ~10 kB proof, amortizing the Bitcoin transaction fee across the entire proof set.
+
+**Submission.** The node broadcasts the proof transaction to Bitcoin. The two-week expiration window provides substantial buffer against Bitcoin network congestion—even during periods of high fees and full blocks, nodes have ample time to ensure their proof transactions confirm. This long window is intentional: it allows nodes to optimize transaction timing, wait for favorable fee conditions, and batch multiple challenges without risking expiration. Indexers detect these transactions, extract the proof and challenge identifiers, and verify the proof deterministically. Because the proof system uses transparent setup (no trusted ceremony), anyone can verify proofs using only the public parameters, the challenge parameters, and the on-chain Merkle roots.
+
+## Verification and Detection
+
+When indexers receive a proof transaction, they verify it against the challenge parameters and file metadata. The verification checks:
+1. The proof was submitted before the challenge expired
+2. The public inputs match the expected challenge (correct file root, seed, tree depth)
+3. The Nova SNARK verification passes (proving the node executed the correct circuit for all challenged sectors)
+4. The final state matches the initial state (the Merkle root remained consistent throughout all verifications)
+
+Verification takes approximately 50 milliseconds regardless of file size or number of challenged sectors—the constant-time verification is what makes on-chain verification practical. If verification succeeds, the challenge is marked as satisfied and removed from the active challenge queue. If the proof is invalid or missing when the challenge expires, the node is slashed.
+
+**Detection guarantees.** The challenge mechanism provides probabilistic guarantees calibrated to make selective storage economically irrational. For a node that has lost fraction $\mu$ of its data, the probability of detection per challenge is approximately $1 - (1-\mu)^{s_{\text{chal}}}$. With $s_{\text{chal}} = 100$:
+
+- 10% data loss → 99.997% detection probability per challenge
+- 50% data loss → >99.999999999999% detection probability per challenge
+- Complete data loss → detection is virtually certain on first challenge
+
+With 12 challenges per year, a node storing incomplete data faces near-certain detection within weeks. The expected time to detection for even modest data loss (10%) is measured in days to weeks, not months or years. This makes the risk-reward calculation decisively unfavorable—nodes save marginal storage costs (already small relative to capital costs) but face near-certain loss of staked capital plus all future earning potential from that file.
+
+**Erasure coding safety margin.** The 10% data loss threshold is significant because of the Reed-Solomon erasure coding applied during file preparation. Each codeword can reconstruct the original data from any 231 of its 255 symbols (90%). A node storing exactly 90% of each codeword can still answer all challenges (by reconstructing missing sectors on-demand) while maintaining a fully recoverable file. The detection probability is calibrated to catch nodes at or above this threshold—ensuring that files passing challenges remain fully reconstructible. There's no need to detect tiny amounts of missing data; the protocol only needs to ensure nodes don't cross the recovery threshold.
+
+## Challenge Expiration and Failure
+
+If a node fails to submit a valid proof within the challenge window, the challenge expires and the node is slashed. The slashing penalty is $\lambda_{\text{slash}} \cdot k_f$ where $k_f$ is the base stake requirement for that file and $\lambda_{\text{slash}}$ is a protocol parameter. A fraction $\beta_{\text{slash}}$ of the penalty is burned; the remainder is distributed equally to the other nodes storing that file.
+
+The node is immediately removed from the file agreement and loses all future emission rights from that file. If the slashing causes the node's total stake to fall below its requirement for remaining files, an automatic stake-sufficiency restoration process triggers—the node is gracefully removed from additional files (with penalties for each involuntary exit) until stake is sufficient, or if that's impossible, its entire remaining stake is burned and it's removed from all agreements.
+
+This mechanism ensures that challenge failures carry severe consequences. The lost stake typically exceeds storage costs by factors of 10-100×, and the loss of future earnings compounds the penalty. The protocol doesn't need surveillance beyond the challenge mechanism itself—the economics make honest storage the dominant strategy for rational operators.
+
+## Why This Works
+
+The challenge-response mechanism transforms the storage problem from "trust that nodes are storing data" to "make it extremely unprofitable for nodes not to store data." Three properties make this transformation effective:
+
+**Unpredictable challenges.** Nodes cannot predict which files will be challenged or which sectors will be sampled until the Bitcoin block is mined. This prevents nodes from storing only frequently-challenged sectors or reconstructing data on-demand from partial copies. By the time a node knows it's been challenged, it's too late to acquire the data—the proof must demonstrate possession of data the node already had when the challenge was generated.
+
+**High detection probability.** Even modest data loss has near-certain detection within short timeframes. The expected loss from detection (slashed stake plus lost future earnings) vastly exceeds the savings from not storing data. The protocol doesn't need to catch every byte of missing data—it only needs to make the expected value calculation decisively negative for selective storage strategies.
+
+**Capital cost dominance.** The protocol is designed so that capital costs (opportunity cost of staked KOR) dominate operational costs by orders of magnitude. Attacks that attempt to save storage costs while maintaining rewards must still bear full capital costs. Since capital costs dwarf storage costs, the savings from deletion are negligible compared to the capital that must still be committed to earn rewards. This asymmetry—combined with high detection probability—makes honest storage the most profitable strategy for rational operators.
+

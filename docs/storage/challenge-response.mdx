@@ -5,6 +5,24 @@ title: Challenge and Response
 
 The challenge-response mechanism is what makes trustless storage verification possible. Without it, rational storage nodes would delete data immediately and pocket rewards until caught. The protocol solves this by randomly auditing files and requiring nodes to prove cryptographically that they possess specific data at the moment of challenge.
 
+```mermaid
+sequenceDiagram
+    participant BC as Bitcoin Blockchain
+    participant IX as Indexer
+    participant SN as Storage Node
+
+    BC->>IX: Mine Block (height h)
+    IX->>IX: Generate Challenges
+    SN-->>IX: Fetch Challenges
+    
+    SN->>SN: Generate Nova IVC Proof
+    SN->>BC: Submit Proof Tx
+    
+    BC->>IX: Mine Block (height h+k)
+    IX->>IX: Verify Proof
+    IX->>IX: Process Expired (h+W_proof)
+```
+
 ## Challenge Generation
 
 Each Bitcoin block, Kontor indexers deterministically derive a set of challenges from the block hash. The block hash provides unpredictable, high-entropy randomness that cannot be biased by miners (grinding attacks are economically irrational—the cost of discarding a valid block vastly exceeds any benefit from influencing which nodes are challenged). Using Bitcoin's proof-of-work as the randomness source ensures challenges are fair, verifiable, and impossible to predict in advance.

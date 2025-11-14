@@ -1,0 +1,362 @@
+---
+title: Numbers and Arithmetic
+---
+
+Sigil provides arbitrary precision number types—`Integer` and `Decimal`—for financial calculations that require exact arithmetic without overflow or rounding errors.
+
+## Integer Type
+
+The `Integer` type provides 256-bit signed arbitrary precision integers.
+
+### Structure
+
+```rust
+pub struct Integer {
+    r0: u64,
+    r1: u64,
+    r2: u64,
+    r3: u64,
+    sign: Sign,  // Plus or Minus
+}
+```
+
+**Maximum value:** 2^256 - 1 (roughly 115 quattuorvigintillion)
+
+### Creating Integers
+
+```rust
+// From literals
+let a: Integer = 42.into();
+let b: Integer = "1_000_000_000_000_000_000".into();
+
+// From u64
+let c = Integer::from(12345u64);
+
+// Default is zero
+let zero = Integer::default();
+```
+
+### Arithmetic Operations
+
+**Unchecked operations** (panic on overflow):
+
+```rust
+let sum = a + b;       // Panics on overflow
+let diff = a - b;      // Panics on underflow
+let product = a * b;   // Panics on overflow
+let quotient = a / b;  // Panics on division by zero
+let remainder = a % b;
+```
+
+**Checked operations** (return Result):
+
+```rust
+let sum = a.add(b)?;       // Returns Result<Integer, Error>
+let diff = a.sub(b)?;
+let product = a.mul(b)?;
+let quotient = a.div(b)?;  // Returns Error::DivByZero on zero
+let sqrt = a.sqrt()?;
+```
+
+### Comparisons
+
+```rust
+if a > b { }
+if a == b { }
+if a <= b { }
+
+// Find maximum
+let max = if a > b { a } else { b };
+```
+
+### Conversions
+
+```rust
+// To string
+let s = a.to_string();
+
+// From string
+let n: Integer = "12345".into();
+
+// To Decimal
+let d = Decimal::from(a);
+```
+
+### When to Use Integer
+
+**Use Integer for:**
+- Token balances
+- Large financial calculations
+- Vote counts
+- Pool liquidity amounts
+- Any value that might exceed u64 (18.4 quintillion)
+- Exact arithmetic requirements
+
+**Use u64 for:**
+- Small counters
+- Block heights
+- Array indices
+- When you know the value fits in 64 bits
+
+## Decimal Type
+
+The `Decimal` type provides arbitrary precision decimals for calculations requiring fractional values.
+
+### Structure
+
+```rust
+pub struct Decimal {
+    r0: u64,
+    r1: u64,
+    r2: u64,
+    r3: u64,
+    sign: Sign,
+}
+```
+
+### Creating Decimals
+
+```rust
+// From Integer
+let i = Integer::from(100);
+let d = Decimal::from(i);
+
+// From u64
+let d = Decimal::from(42);
+```
+
+### Operations
+
+```rust
+// Logarithm (base 10)
+let d = Decimal::from(100);
+let log = d.log10()?;  // Result: "2.0"
+
+// Conversion to Integer (truncates)
+let i = d.to_integer();
+```
+
+### When to Use Decimal
+
+**Use Decimal for:**
+- Price calculations
+- Percentage calculations
+- Logarithmic operations
+- Scientific calculations
+
+**Most contracts use Integer** for exact arithmetic and avoid decimals entirely.
+
+## Example: Token Contract
+
+```rust
+use stdlib::*;
+
+contract!(name = "token");
+
+#[derive(Clone, Default, StorageRoot)]
+struct TokenStorage {
+    pub ledger: Map<String, Integer>,
+}
+
+impl Guest for Token {
+    fn mint(ctx: &ProcContext, n: Integer) {
+        let to = ctx.signer().to_string();
+        let ledger = ctx.model().ledger();
+        let balance = ledger.get(&to).unwrap_or_default();
+        
+        // Unchecked: simple addition
+        ledger.set(to, balance + n);
+    }
+
+    fn mint_checked(ctx: &ProcContext, n: Integer) -> Result<(), Error> {
+        let to = ctx.signer().to_string();
+        let ledger = ctx.model().ledger();
+        let balance = ledger.get(&to).unwrap_or_default();
+        
+        // Checked: returns overflow error
+        ledger.set(to, balance.add(n)?);
+        Ok(())
+    }
+
+    fn transfer(ctx: &ProcContext, to: String, n: Integer) -> Result<(), Error> {
+        let from = ctx.signer().to_string();
+        let ledger = ctx.model().ledger();
+
+        let from_balance = ledger.get(&from).unwrap_or_default();
+        let to_balance = ledger.get(&to).unwrap_or_default();
+
+        if from_balance < n {
+            return Err(Error::Message("insufficient funds".to_string()));
+        }
+
+        // Unchecked: subtraction safe after validation
+        ledger.set(from, from_balance - n);
+        ledger.set(to, to_balance + n);
+        Ok(())
+    }
+
+    fn balance_log10(ctx: &ViewContext, acc: String) -> Result<Option<Decimal>, Error> {
+        ctx.model()
+            .ledger()
+            .get(acc)
+            .map(|i| Decimal::from(i).log10())
+            .transpose()
+    }
+}
+```
+
+## Example: AMM Pool Math
+
+```rust
+fn create_pool(
+    ctx: &ProcContext,
+    amount_a: Integer,
+    amount_b: Integer,
+) -> Result<Integer, Error> {
+    // LP shares = sqrt(amount_a * amount_b)
+    let product = amount_a.mul(amount_b)?;  // Checked multiplication
+    let lp_shares = product.sqrt()?;        // Checked sqrt
+
+    // Store in pool
+    ctx.model().set_lp_total_supply(lp_shares.clone());
+
+    Ok(lp_shares)
+}
+
+fn calculate_swap(
+    reserve_in: Integer,
+    reserve_out: Integer,
+    amount_in: Integer,
+    fee_bps: Integer,
+) -> Result<Integer, Error> {
+    // Constant product formula: x * y = k
+    // With fee: out = (amount_in * (10000 - fee_bps) * reserve_out) / (reserve_in * 10000 + amount_in * (10000 - fee_bps))
+
+    let fee_multiplier = Integer::from(10000) - fee_bps;
+    let amount_in_with_fee = amount_in.mul(fee_multiplier)?;
+    
+    let numerator = amount_in_with_fee.mul(reserve_out)?;
+    let denominator = reserve_in.mul(Integer::from(10000))?.add(amount_in_with_fee)?;
+    
+    numerator.div(denominator)
+}
+```
+
+## Choosing Between Checked and Unchecked
+
+**Use checked operations when:**
+- Working with user inputs
+- Complex calculations where overflow is possible
+- You want specific error messages for overflow
+- Financial calculations requiring exact results
+
+**Use unchecked operations when:**
+- You've already validated the operation is safe
+- Performance is critical
+- The overflow would indicate a bug (panic is appropriate)
+
+See the token contract example above for combining both approaches—validation with checked arithmetic, then unchecked operations after validation.
+
+## Common Patterns
+
+### Safe Division
+
+```rust
+fn calculate_ratio(numerator: Integer, denominator: Integer) -> Result<Integer, Error> {
+    if denominator == Integer::from(0) {
+        return Err(Error::DivByZero("Cannot divide by zero".to_string()));
+    }
+    
+    numerator.div(denominator)
+}
+```
+
+### Square Root for LP Tokens
+
+```rust
+fn mint_liquidity(amount_a: Integer, amount_b: Integer) -> Result<Integer, Error> {
+    let product = amount_a.mul(amount_b)?;
+    product.sqrt()  // Common pattern for initial LP shares
+}
+```
+
+### Percentage Calculations
+
+```rust
+fn apply_fee(amount: Integer, fee_bps: Integer) -> Result<Integer, Error> {
+    // fee_bps is basis points (1% = 100 bps)
+    let fee = amount.mul(fee_bps)?.div(Integer::from(10000))?;
+    amount.sub(fee)
+}
+```
+
+### Comparison Utilities
+
+```rust
+fn max(a: Integer, b: Integer) -> Integer {
+    if a > b { a } else { b }
+}
+
+fn min(a: Integer, b: Integer) -> Integer {
+    if a < b { a } else { b }
+}
+```
+
+## Quick Reference
+
+### Number Types and Ranges
+
+**Integer**
+- 256-bit signed arbitrary precision integers
+- Range: `±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457`
+- Maximum value: 2^256 - 1
+
+**Decimal**
+- Arbitrary precision decimals with up to 18 decimal places
+- Range: `±(2^256 - 1) / 10^18`
+- Full range: `±115_792_089_237_316_195_423_570_985_008_687_907_853_269_984_665_640_564_039_457.584_007_913_129_639_936`
+
+### Arithmetic Operations
+
+Both types support basic arithmetic operations (`add`, `sub`, `mul`, `div`) and comparisons.
+
+**Unchecked (using operators):**
+```rust
+let result = a + b;    // Panics on overflow
+let result = a - b;    // Panics on underflow
+let result = a * b;    // Panics on overflow
+let result = a / b;    // Panics on division by zero
+```
+
+**Checked (using methods):**
+```rust
+let result = a.add(b)?;    // Returns Result<Integer, Error>
+let result = a.sub(b)?;    // Error::Overflow on overflow
+let result = a.mul(b)?;    // Error::Overflow on overflow
+let result = a.div(b)?;    // Error::DivByZero on zero
+```
+
+### Advanced Operations
+
+**Integer:**
+- `.sqrt()` - Square root (returns `Result<Integer, Error>`)
+
+**Decimal:**
+- `.log10()` - Base-10 logarithm (returns `Result<Decimal, Error>`)
+- Additional operations to be expanded
+
+### Type Conversions
+
+```rust
+// Integer from literals
+let i: Integer = 42.into();
+let i: Integer = "1_000_000".into();
+
+// Decimal from Integer
+let d = Decimal::from(integer);
+
+// Integer from Decimal (truncates)
+let i = decimal.to_integer();
+```
+
+

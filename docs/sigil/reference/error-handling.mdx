@@ -1,0 +1,342 @@
+---
+title: Error Handling
+---
+
+Sigil provides robust error handling through Rust's `Result` type combined with automatic storage rollback. Understanding when to use errors versus panics, and how rollback works across contract calls, is essential for writing correct contracts.
+
+## The Error Type
+
+```rust
+pub enum Error {
+    Message(String),
+    Overflow(String),
+    DivByZero(String),
+    SyntaxError(String),
+}
+```
+
+Defined in `core/indexer/src/runtime/wit/deps/built-in.wit`.
+
+## When to Use Result vs Panic
+
+### Use Result for Expected Errors
+
+**Expected failure cases:**
+```rust
+fn transfer(ctx: &ProcContext, to: String, n: Integer) -> Result<(), Error> {
+    let from = ctx.signer().to_string();
+    let ledger = ctx.model().ledger();
+    let from_balance = ledger.get(&from).unwrap_or_default();
+
+    // Business logic error - use Result
+    if from_balance < n {
+        return Err(Error::Message("insufficient funds".to_string()));
+    }
+
+    ledger.set(from, from_balance - n);
+    let to_balance = ledger.get(&to).unwrap_or_default();
+    ledger.set(to, to_balance + n);
+
+    Ok(())
+}
+```
+
+**Use cases:**
+- Business logic errors (insufficient funds, unauthorized access)
+- Invalid input validation
+- Cross-contract call errors
+- Any error the user might trigger through normal operation
+
+### Use panic! for:
+
+**Invariant violations:**
+```rust
+fn internal_operation(ctx: &ProcContext) {
+    let value = ctx.model().critical_value();
+    
+    // This should never be None if contract is correct
+    if value.is_none() {
+        panic!("Critical invariant violated: value must exist");
+    }
+}
+```
+
+**Use cases:**
+- Invariant violations (should never happen)
+- Internal bugs
+- Unrecoverable errors
+
+**Important:** Panics roll back ALL storage changes across the entire call chain.
+
+## Creating Custom Error Messages
+
+### Basic Error Messages
+
+```rust
+fn validate_pair(pair: &TokenPair) -> Result<(), Error> {
+    if pair.a.name.is_empty() || pair.b.name.is_empty() {
+        return Err(Error::Message(
+            "Token addresses must not be empty".to_string()
+        ));
+    }
+
+    if pair.a.to_string() >= pair.b.to_string() {
+        return Err(Error::Message(
+            "Token pair must be ordered A < B".to_string()
+        ));
+    }
+
+    Ok(())
+}
+```
+
+### Reusable Error Constructors
+
+```rust
+fn insufficient_balance_error() -> Error {
+    Error::Message("insufficient balance".to_string())
+}
+
+fn unauthorized_error() -> Error {
+    Error::Message("unauthorized".to_string())
+}
+
+fn unknown_error() -> Error {
+    Error::Message("unknown account".to_string())
+}
+
+// Usage
+fn deposit(ctx: &ProcContext, account_id: String, n: Integer) -> Result<(), Error> {
+    let account = ctx
+        .model()
+        .accounts()
+        .get(account_id)
+        .ok_or(unknown_error())?;
+
+    if !authorized(ctx.signer(), &account) {
+        return Err(unauthorized_error());
+    }
+
+    // ...
+}
+```
+
+## Overflow and Division Errors
+
+### Checked Operations
+
+Integer and Decimal types provide checked operations:
+
+```rust
+impl Integer {
+    fn add(self, other: Integer) -> Result<Integer, Error>;  // Overflow checked
+    fn sub(self, other: Integer) -> Result<Integer, Error>;
+    fn mul(self, other: Integer) -> Result<Integer, Error>;
+    fn div(self, other: Integer) -> Result<Integer, Error>;  // Div by zero checked
+    fn sqrt(self) -> Result<Integer, Error>;
+}
+```
+
+**Usage:**
+```rust
+fn mint_checked(ctx: &ProcContext, n: Integer) -> Result<(), Error> {
+    let to = ctx.signer().to_string();
+    let ledger = ctx.model().ledger();
+    let balance = ledger.get(&to).unwrap_or_default();
+
+    // .add() returns Result<Integer, Error>
+    ledger.set(to, balance.add(n)?);
+
+    Ok(())
+}
+```
+
+### Unchecked Operations
+
+Standard operators panic on overflow:
+
+```rust
+let result = a + b;  // Panics on overflow
+let result = a - b;  // Panics on underflow
+let result = a * b;  // Panics on overflow
+let result = a / b;  // Panics on division by zero
+```
+
+**When to use unchecked:**
+- When you've already validated the operation won't overflow
+- When panic is acceptable (simple contracts, testing)
+- When performance is critical (avoid double checks)
+
+**When to use checked:**
+- User-provided inputs
+- Complex calculations
+- When you want to return a specific error message
+
+## Rollback Semantics
+
+### What Rolls Back
+
+When a function returns an `Err` or panics, **ALL storage modifications are rolled back**.
+
+**Example:**
+```rust
+fn outer(ctx: &ProcContext) -> Result<(), Error> {
+    ctx.model().set_count(1);
+    inner(ctx)?;  // If this errors, set_count(1) is rolled back
+    ctx.model().set_count(3);
+    Ok(())
+}
+
+fn inner(ctx: &ProcContext) -> Result<(), Error> {
+    ctx.model().set_count(2);
+    Err(Error::Message("oops".to_string()))
+    // Both set_count(1) and set_count(2) are rolled back
+}
+```
+
+### Cross-Contract Rollback
+
+**Both errors and panics roll back the entire call chain:**
+
+```rust
+fn outer(ctx: &ProcContext) -> Result<(), Error> {
+    ctx.model().set_count(1);
+    inner(ctx)?;  // If this errors, set_count(1) is rolled back
+    ctx.model().set_count(3);
+    Ok(())
+}
+
+fn inner(ctx: &ProcContext) -> Result<(), Error> {
+    ctx.model().set_count(2);
+    Err(Error::Message("oops".to_string()))
+    // Both set_count(1) and set_count(2) are rolled back
+}
+```
+
+**This applies across cross-contract calls:**
+- If Contract A calls Contract B, and B returns an error
+- ALL storage changes in both A and B are rolled back
+- The entire transaction has no effect
+
+### No Partial Commits
+
+A transaction either:
+- Completes fully with all storage changes persisted
+- Fails entirely with no storage changes
+
+This applies across all cross-contract calls in the transaction.
+
+## Error Handling Best Practices
+
+### 1. Validate Early
+
+```rust
+fn create_pool(ctx: &ProcContext, pair: TokenPair, amount_a: Integer, amount_b: Integer) -> Result<(), Error> {
+    // Validate all inputs first
+    validate_pair(&pair)?;
+    validate_amount(amount_a)?;
+    validate_amount(amount_b)?;
+
+    // Then proceed with logic
+    // ...
+}
+```
+
+### 2. Use Descriptive Error Messages
+
+```rust
+// Bad
+Err(Error::Message("error".to_string()))
+
+// Good
+Err(Error::Message("Pool for this pair already exists".to_string()))
+```
+
+### 3. Propagate Cross-Contract Errors
+
+```rust
+fn deposit(ctx: &ProcContext, token: ContractAddress, n: Integer) -> Result<(), Error> {
+    // Propagate token transfer errors to caller
+    token::transfer(&token, ctx.signer(), &ctx.contract_signer().to_string(), n)?;
+
+    // Update local state
+    let account = ctx.model().account();
+    account.update_balance(|b| b + n);
+
+    Ok(())
+}
+```
+
+### 4. Handle Option Types Carefully
+
+```rust
+// Option 1: Use ok_or
+let account = ctx.model().accounts().get(id).ok_or(unknown_error())?;
+
+// Option 2: Pattern match
+match ctx.model().accounts().get(id) {
+    Some(account) => { /* ... */ },
+    None => return Err(unknown_error()),
+}
+
+// Option 3: Use unwrap_or_default for safe defaults
+let balance = ledger.get(&account).unwrap_or_default();
+```
+
+### 5. Follow Checks-Effects-Interactions (CEI) Pattern
+
+```rust
+fn withdraw(ctx: &ProcContext, token: ContractAddress, amount: Integer) -> Result<(), Error> {
+    // CHECK: Verify conditions
+    let account = ctx.model().account();
+    if account.balance() < amount {
+        return Err(insufficient_balance_error());
+    }
+
+    // EFFECT: Update storage
+    account.set_balance(account.balance() - amount);
+
+    // INTERACTION: Make external calls
+    token::transfer(&token, ctx.contract_signer(), &ctx.signer().to_string(), amount)?;
+
+    Ok(())
+}
+```
+
+**Why this matters:**
+- External calls can fail
+- State changes before the call are preserved (unless you propagate the error)
+- CEI pattern makes reasoning easier
+
+## Testing Errors
+
+### Testing Expected Errors
+
+```rust
+#[testlib::test]
+async fn test_insufficient_funds() -> Result<()> {
+    let alice = runtime.identity().await?;
+    let bob = runtime.identity().await?;
+    let token = runtime.publish(&alice, "token").await?;
+
+    // Alice has no tokens, transfer should fail
+    let result = token::transfer(runtime, &token, &alice, &bob, 100.into()).await?;
+
+    assert_eq!(
+        result,
+        Err(Error::Message("insufficient funds".to_string()))
+    );
+
+    Ok(())
+}
+```
+### Testing Error Messages
+
+```rust
+let result = risky_operation().await;
+assert!(result.is_err_and(|e|
+    e.root_cause().to_string().contains("expected substring")
+));
+```
+
+

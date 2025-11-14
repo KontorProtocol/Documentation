@@ -7,6 +7,19 @@ Bitcoin was designed as a state machine for decentralized agreement on payments,
 
 Yet blockchain applications need data with strong availability guarantees. NFTs need to reference images. DeFi protocols need state snapshots and oracle data. Assets need metadata. Kontor squares the circle: it provides Bitcoin users with scalable, permanent, off-chain file storage where the data storage *system* itself is entirely on-chain. The file contents live off-chain with storage nodes who are economically incentivized to maintain them forever. The blockchain records only the cryptographic commitments and periodic proofs of possession—the stateful components that require consensus. This architecture makes large-scale data storage economically practical while providing Byzantine fault-tolerant availability guarantees that are as strong as those of on-chain storage.
 
+<div style={{maxWidth: '600px', margin: '2rem auto'}}>
+  <img 
+    className="block dark:hidden" 
+    src="/img/storage-agreement-lifecycle.svg" 
+    alt="Storage Agreement Lifecycle"
+  />
+  <img 
+    className="hidden dark:block" 
+    src="/img/storage-agreement-lifecycle-dark.svg" 
+    alt="Storage Agreement Lifecycle"
+  />
+</div>
+
 ## Pay Once, Store Forever
 
 Traditional cloud storage operates on subscription models: stop paying, lose your data. This is fundamentally incompatible with blockchain use cases where assets might sit dormant for years. A one-time payment cannot fund perpetual service—even a large upfront fee will eventually be depleted. Storage nodes incur continuous costs for equipment, bandwidth, power, and facilities that must be met indefinitely.

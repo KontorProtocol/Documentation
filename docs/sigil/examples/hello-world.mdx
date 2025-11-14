@@ -3,22 +3,74 @@ sidebar_position: 1
 title: 1. Hello World
 ---
 
-This example illustrates the fundamental structure of a simple Sigil contract, serving as a good starting point for creating your own.
-
 <Note>
 **Full working code**: The complete source code for this example is available in [`example-contracts/hello-world/`](https://github.com/KontorProtocol/Documentation/tree/main/example-contracts/hello-world)
 </Note>
 
-## WIT Interface
-- Includes `kontor:built-in` via the `wit/deps/built-in.wit` symlink
-- Exports:
-  - `init`: All contracts must implement an `init` function which will be run automatically at publication
-  - `hello-world`: A simple view function that returns a string
+This example walks you through creating your first Sigil contract—a simple "Hello World" that demonstrates the fundamental structure and workflow.
 
-```wit contract/wit/contract.wit
-package kontor:contract;
+## Project Structure
 
-world contract {
+```
+hello-world/
+├── Cargo.toml          # Workspace configuration
+├── contract/
+│   ├── Cargo.toml      # Contract dependencies
+│   ├── wit/
+│   │   └── contract.wit
+│   └── src/
+│       └── lib.rs
+└── test/
+    ├── Cargo.toml      # Test dependencies
+    └── src/
+        └── lib.rs
+```
+
+## Step 1: Workspace Configuration
+
+**Root `Cargo.toml`:**
+```toml
+[workspace]
+members = ["contract", "test"]
+resolver = "2"
+
+[workspace.dependencies]
+stdlib = { path = "../../Kontor/core/stdlib" }
+testlib = { path = "../../Kontor/core/testlib" }
+```
+
+<Note>
+The paths shown assume the `Documentation` and `Kontor` repos are siblings. If you cloned them to different locations, adjust these paths to point to your Kontor installation. See [Getting Started](/docs/sigil/quickstart#working-with-example-contracts) for setup details.
+</Note>
+
+## Step 2: Contract Configuration
+
+**`contract/Cargo.toml`:**
+```toml
+[package]
+name = "hello-world"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+stdlib = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]  # Required for WASM compilation
+```
+
+**Key points:**
+- `crate-type = ["cdylib"]` - Builds a dynamic library for WASM
+- `stdlib` provides the `contract!` macro and runtime primitives
+
+## Step 3: Define the Contract Interface (WIT)
+
+Create `contract/wit/contract.wit`:
+
+```wit
+package root:component;
+
+world root {
     include kontor:built-in/built-in;
     use kontor:built-in/context.{view-context, proc-context};
 
@@ -28,10 +80,15 @@ world contract {
 }
 ```
 
-## Rust Implementation
-In `contract/src/lib.rs`, the `contract!` sets the contract name and generates boilerplate code and types. The `HelloWorld` struct is automatically derived from it. The generated `Guest` trait is implemented with:
-- `init`: Empty, as no contract storage is needed
-- `hello-world`: Returns a static string
+**What this defines:**
+- `init` - Called once when contract is deployed
+- `hello-world` - Returns a greeting string (read-only)
+
+The `kontor:built-in` types are available via a symlink at `wit/deps/built-in.wit`.
+
+## Step 4: Implement the Contract
+
+Create `contract/src/lib.rs`:
 
 ```rust contract/src/lib.rs
 use stdlib::*;
@@ -47,38 +104,93 @@ impl Guest for HelloWorld {
 }
 ```
 
-## Testing
-The test in `test/src/lib.rs`:
-- The `use testlib::*` import populates the namespace with trait implementations and types to make testing contracts as close to calling Rust functions as possible.
-- `contract_bytes()` loads the bytes of the `hello-world` contract.
-- `import!` generates a module named `hello_world` (the snake case version of the `name` `hello-world`) that exposes functions matching the contract's exports, providing a convenient interface for interacting with it.
-- Calls `hello_world`, and verifies the output.
+**How it works:**
+- `contract!(name = "hello-world")` - Generates the `Guest` trait and WASM bindings
+- `impl Guest for HelloWorld` - The contract name is converted to PascalCase
+- `init()` - Empty because we don't need storage
+- `hello_world()` - Returns a static string
+
+## Step 5: Build and Test
+
+The contract is automatically built when you run tests. The test directory's `build.rs` handles compilation, optimization, and compression:
+
+```bash
+cd test
+cargo test
+```
+
+The `build.rs` automatically:
+1. Compiles the contract to WASM
+2. Optimizes with `wasm-opt -Oz --enable-bulk-memory --enable-sign-ext`
+3. Compresses with `brotli` to create `.wasm.br`
+
+**To build manually without running tests:**
+```bash
+cd contract
+cargo build --release --target wasm32-unknown-unknown
+wasm-opt -Oz --enable-bulk-memory --enable-sign-ext \
+  target/wasm32-unknown-unknown/release/hello_world.wasm \
+  -o hello_world_opt.wasm
+brotli -Zf hello_world_opt.wasm -o hello_world.wasm.br
+```
+
+## Step 6: Write Tests
+
+Create `test/src/lib.rs`:
 
 ```rust test/src/lib.rs
 #[cfg(test)]
 mod tests {
     use testlib::*;
 
-    import!(
-        name = "hello-world",
-        height = 0,
-        tx_index = 0,
-        path = "contract/wit",
-    );
+    interface!(name = "hello-world", path = "contract/wit");
 
-    #[tokio::test]
+    #[testlib::test]
     async fn test_contract() -> Result<()> {
-        let runtime = Runtime::new(
-            RuntimeConfig::builder()
-                .contracts(&[("hello-world", &contract_bytes().await?)])
-                .build(),
-        )
-        .await?;
-
-        let result = hello_world::hello_world(&runtime).await?;
+        let alice = runtime.identity().await?;
+        let hello_world = runtime.publish(&alice, "hello-world").await?;
+        let result = hello_world::hello_world(runtime, &hello_world).await?;
         assert_eq!(result, "Hello, World!");
-
         Ok(())
     }
 }
 ```
+
+**What this does:**
+- `interface!` - Generates type-safe bindings from the WIT file
+- `#[testlib::test]` - Auto-injects the `runtime` variable
+- `runtime.identity()` - Creates a test user with gas funding
+- `runtime.publish()` - Deploys the contract and returns its address
+- `hello_world::hello_world()` - Calls the contract function
+
+**Run tests:**
+```bash
+cd test
+cargo test
+```
+
+## Common First-Time Issues
+
+**`contract!` macro not found**
+```
+error: cannot find macro `contract` in this scope
+```
+**Solution:** Add `use stdlib::*;` at the top of your file
+
+**Missing Guest trait implementation**
+```
+error: not all trait items implemented, missing: `hello_world`
+```
+**Solution:** Ensure you've implemented all functions listed in your WIT file. Function names with hyphens in WIT become underscores in Rust.
+
+**WIT file parse error**
+```
+error: expected `include`, `use`, `import`, `export`, or `type`
+```
+**Solution:** Ensure you have `include kontor:built-in/built-in;` in your WIT world
+
+**Build target not installed**
+```
+error: can't find crate for `core`
+```
+**Solution:** Install the WASM target: `rustup target add wasm32-unknown-unknown`

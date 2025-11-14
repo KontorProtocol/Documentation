@@ -1,0 +1,322 @@
+---
+title: Cross-Contract Calls
+---
+
+Sigil contracts can call other contracts with full type safety. The framework provides two macros for importing contract interfaces: `interface!` for dynamic addresses and `import!` for fixed addresses.
+
+## The interface! Macro
+
+Import another contract's interface without specifying its address:
+
+```rust
+interface!(name = "token", path = "token/wit");
+```
+
+**What it does:**
+- Reads the WIT file from the specified path
+- Generates type-safe Rust bindings
+- Creates functions you can call from your contract
+
+## The import! Macro
+
+Import a specific contract instance at a known address:
+
+```rust
+import!(
+    name = "token",
+    mod_name = "my_token",
+    height = 100,
+    tx_index = 0,
+    path = "token/wit"
+);
+```
+
+**Parameters:**
+- `name` - Contract name
+- `mod_name` - Rust module name (avoid conflicts)
+- `height` - Block height where contract was deployed
+- `tx_index` - Transaction index in that block
+- `path` - Path to WIT file
+
+The macro generates functions similar to `interface!` but with the contract address fixed at compile time.
+
+### When to Use Each
+
+**Use `interface!` for dynamic addresses** (passed as parameters):
+```rust
+fn deposit(ctx: &ProcContext, token: ContractAddress, amount: Integer) -> Result<(), Error> {
+    token::transfer(&token, ctx.signer(), &ctx.contract_signer().to_string(), amount)?;
+    // ...
+}
+```
+
+**Use `import!` for fixed addresses** (known at compile time):
+```rust
+// In tests or contracts with known dependencies
+import!(
+    name = "arith",
+    mod_name = "arith_v1",
+    height = 1,
+    tx_index = 0,
+    path = "arith/wit"
+);
+
+fn calculate(ctx: &ProcContext, x: u64) -> u64 {
+    arith_v1::eval(ctx.signer(), x, arith_v1::Op::Id).value
+}
+```
+
+## Making Cross-Contract Calls
+
+### Basic Example
+
+From the shared-account contract:
+
+```rust
+use stdlib::*;
+
+contract!(name = "shared-account");
+
+// Import token interface dynamically
+interface!(name = "token", path = "token/wit");
+
+impl Guest for SharedAccount {
+    fn deposit(
+        ctx: &ProcContext,
+        token: ContractAddress,  // Dynamic token address
+        account_id: String,
+        n: Integer,
+    ) -> Result<(), Error> {
+        // Call token contract's transfer function
+        token::transfer(&token, ctx.signer(), &ctx.contract_signer().to_string(), n)?;
+
+        // Update local state
+        let account = ctx.model().accounts().get(account_id).ok_or(unknown_error())?;
+        account.update_balance(|b| b + n);
+
+        Ok(())
+    }
+
+    fn token_balance(
+        _ctx: &ViewContext,
+        token: ContractAddress,
+        holder: String,
+    ) -> Option<Integer> {
+        // Call token contract's balance function (view)
+        token::balance(&token, &holder)
+    }
+}
+```
+
+## ContractAddress Type
+
+```rust
+pub struct ContractAddress {
+    pub name: String,
+    pub height: s64,
+    pub tx_index: s64,
+}
+```
+
+**Creating addresses:**
+```rust
+let addr = ContractAddress {
+    name: "token".to_string(),
+    height: 100,
+    tx_index: 0,
+};
+```
+
+## Call Context and Signers
+
+### The Signer Parameter
+
+When making cross-contract calls, you choose whose authority to use:
+
+**Execute as the current user:**
+```rust
+fn transfer_from_caller(ctx: &ProcContext, token: ContractAddress, to: String, n: Integer) -> Result<(), Error> {
+    // Transfer from caller's account
+    token::transfer(&token, ctx.signer(), &to, n)
+}
+```
+
+**Execute as the contract itself:**
+```rust
+fn transfer_from_contract(ctx: &ProcContext, token: ContractAddress, to: String, n: Integer) -> Result<(), Error> {
+    // Transfer from contract's own account
+    token::transfer(&token, ctx.contract_signer(), &to, n)
+}
+```
+
+**When to use contract_signer():**
+- Contract holds tokens on behalf of users
+- Contract acts as custodian
+- Escrow patterns
+
+## Error Propagation
+
+Errors from cross-contract calls propagate automatically with `?`:
+
+```rust
+fn fib_of_sub(
+    ctx: &ProcContext,
+    arith_address: ContractAddress,
+    x: String,
+    y: String,
+) -> Result<u64, Error> {
+    // If arith::checked_sub returns an error, it propagates
+    let n = arith::checked_sub(&arith_address, &x, &y)?;
+    Ok(Self::fib(ctx, arith_address, n))
+}
+```
+
+**Cross-contract errors roll back all storage changes** in the entire call chain.
+
+## Re-entrancy Protection
+
+The runtime prevents re-entrancy automatically:
+
+```
+Contract A calls Contract B
+Contract B tries to call Contract A
+→ Error: "reentrancy prevented"
+```
+
+**Example:**
+```rust
+// arith contract calls fib contract
+// fib contract calls back to arith -> OK (different direction)
+
+// But if arith calls fib, and fib calls back to arith:
+// -> Runtime error: "reentrancy prevented"
+```
+
+**Why this matters:**
+- Prevents common exploit patterns
+- Simplifies reasoning about contract behavior
+- No need for re-entrancy guards
+
+## Multi-Contract Interaction Example
+
+AMM (Automated Market Maker) calling Token contract:
+
+```rust
+contract!(name = "amm");
+interface!(name = "token_dyn", path = "token/wit");
+
+fn create(
+    ctx: &ProcContext,
+    pair: TokenPair,
+    amount_a: Integer,
+    amount_b: Integer,
+    fee_bps: Integer,
+) -> Result<Integer, Error> {
+    // Transfer tokens from user to AMM contract
+    let custodian = ctx.contract_signer().to_string();
+
+    token_dyn::transfer(&pair.a, ctx.signer(), &custodian, amount_a)?;
+    token_dyn::transfer(&pair.b, ctx.signer(), &custodian, amount_b)?;
+
+    // Create pool
+    let lp_shares = (amount_a * amount_b).sqrt()?;
+    
+    // Store pool data in AMM's storage
+    // ...
+
+    Ok(lp_shares)
+}
+```
+
+**Pattern:**
+1. Call external contracts first (get tokens)
+2. Validate received amounts
+3. Update local state
+4. Return results
+
+## The foreign::call Low-Level API
+
+For advanced use cases, you can make dynamic calls:
+
+```rust
+use stdlib::*;
+
+fn fallback(ctx: &FallContext, expr: String) -> String {
+    if let Some(addr) = ctx.view_context().model().contract_address() {
+        // Dynamic call to any contract
+        foreign::call(ctx.signer(), &addr, &expr)
+    } else {
+        "".to_string()
+    }
+}
+```
+
+**Signature:**
+```rust
+pub fn call(
+    signer: Option<&Signer>,
+    contract_address: &ContractAddress,
+    expr: &str
+) -> String
+```
+
+**When to use:**
+- Proxy contracts
+- Generic delegation patterns
+- When you need to construct calls dynamically
+- Fallback handlers
+
+**Most contracts should use `interface!` or `import!` instead** for type safety.
+
+## Best Practices
+
+**1. Use interface! for flexibility**
+```rust
+// Good: Accept any token
+fn deposit(ctx: &ProcContext, token: ContractAddress, n: Integer) -> Result<(), Error> {
+    token::transfer(&token, ctx.signer(), &ctx.contract_signer().to_string(), n)
+}
+```
+
+**2. Validate before external calls (CEI pattern)**
+```rust
+fn withdraw(ctx: &ProcContext, token: ContractAddress, n: Integer) -> Result<(), Error> {
+    // Check: Verify authorization and balance
+    let account = ctx.model().account();
+    if account.balance() < n {
+        return Err(insufficient_balance_error());
+    }
+
+    // Effect: Update local state first
+    account.set_balance(account.balance() - n);
+
+    // Interaction: Make external call last
+    token::transfer(&token, ctx.contract_signer(), &ctx.signer().to_string(), n)?;
+
+    Ok(())
+}
+```
+
+**3. Handle cross-contract errors**
+```rust
+// Propagate errors
+token::transfer(&addr, signer, to, amount)?;
+
+// Or handle explicitly
+match token::transfer(&addr, signer, to, amount) {
+    Ok(()) => { /* success */ },
+    Err(e) => {
+        // Log or handle error
+        return Err(Error::Message(format!("Transfer failed: {}", e)));
+    }
+}
+```
+
+**4. Document contract dependencies**
+```rust
+// At top of contract
+//! This contract requires a token contract implementing:
+//! - transfer(to: string, n: integer) -> result<_, error>
+//! - balance(acc: string) -> option<integer>
+```
+

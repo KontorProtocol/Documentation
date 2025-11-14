@@ -1,5 +1,6 @@
 # Words
 canonicalized
+accessor
 accessors
 Numerics
 precompile
@@ -38,19 +39,34 @@ composability
 blockchains
 whitepaper
 Whitepaper
+gatekeep
 gatekeeping
 permissionless
 storers
+storer
 timeframe
 timeframes
 else's
 composable
+tradeable
+repos
+mempool
+rebalancing
+prunable
+uploader
+retrievability
+unforgeability
+griefing
+cryptocurrency
+quattuorvigintillion
 
 
 # File Storage
 k_f
 p_f
+d_f
 F_n
+codeword's
 
 
 # Kontor Protocol Terms
@@ -124,6 +140,10 @@ EVM's
 Uniswap
 AAVE
 NFTs
+Arweave
+Arweave's
+Wasmtime
+Brotli
 
 # Technical Terms
 cross-contract
@@ -134,6 +154,9 @@ determinism
 replication
 slashing
 emissions
+Vec
+tx_index
+is_err_and
 
 # Kontor-Specific
 Alkanes
